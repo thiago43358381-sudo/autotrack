@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>AutoTrack - Controle de Combustível</title>
+    
+    <!-- Tailwind CSS para estilização moderna e responsiva -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js para o gráfico de evolução de consumo -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        slate: {
+                            850: '#172033',
+                            900: '#0f172a',
+                            950: '#090d16',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Barra de rolagem discreta */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        /* Animação suave para notificações */
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .toast-enter {
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body class="text-slate-800 pb-24 md:pb-12">
+
+    <!-- Cabeçalho Automotivo Escuro -->
+    <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-lg border-b border-slate-800">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="bg-emerald-500/20 border border-emerald-500/30 p-2 rounded-xl text-emerald-400">
+                    <!-- Ícone Bomba de Combustível SVG -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="22" x2="15" y2="22"></line>
+                        <line x1="4" y1="9" x2="14" y2="9"></line>
+                        <path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"></path>
+                        <path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-tight leading-none">AutoTrack <span class="text-emerald-400 text-xs font-semibold uppercase tracking-wider ml-1 bg-emerald-500/10 px-1.5 py-0.5 rounded">Pro</span></h1>
+                    <p class="text-xs text-slate-400 mt-0.5 hidden sm:block">Garagem & Gestão de Consumo</p>
+                </div>
+            </div>
+
+            <!-- Seletor de Veículo (Garagem) + Ações -->
+            <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto justify-between sm:justify-end">
+                <!-- Dropdown da Garagem -->
+                <div class="flex items-center bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 flex-1 sm:flex-initial min-w-[185px]">
+                    <span id="header-vehicle-icon" class="text-emerald-400 mr-2 shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
+                    </span>
+                    <select id="header-vehicle-select" onchange="handleVehicleChange(this.value)" aria-label="Selecionar Veículo" class="bg-transparent text-white text-xs sm:text-sm font-semibold focus:outline-none w-full cursor-pointer pr-1">
+                        <!-- Preenchido via JS -->
+                    </select>
+                </div>
+
+                <!-- Botão Gerenciar Garagem / Novo Veículo -->
+                <button onclick="openGarageModal()" title="Gerenciar Meus Veículos" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-xl shadow-sm transition shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span>Veículos</span>
+                </button>
+
+                <!-- Exportar CSV -->
+                <button onclick="exportToCSV()" title="Exportar para Excel/Sheets (CSV)" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 text-xs font-medium px-3 py-2 rounded-xl border border-slate-700 transition shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span class="hidden md:inline">CSV</span>
+                </button>
+
+                <!-- Configurações -->
+                <button onclick="openSettingsModal()" title="Gerenciar Dados" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <main class="max-w-5xl mx-auto px-4 pt-5 space-y-6">
+
+        <!-- Banner Informativo do Veículo Selecionado -->
+        <div id="active-vehicle-banner" class="bg-white px-4 py-3 rounded-2xl shadow-sm border border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div id="banner-icon-box" class="w-10 h-10 rounded-xl bg-slate-900 text-emerald-400 flex items-center justify-center shrink-0">
+                    <!-- Ícone dinâmico -->
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h2 id="banner-vehicle-name" class="text-sm sm:text-base font-bold text-slate-900">HB20 1.0 Sense</h2>
+                        <span id="banner-vehicle-plate" class="text-[11px] font-mono font-bold uppercase px-2 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200">ABC-1D23</span>
+                        <span id="banner-vehicle-type" class="text-[11px] font-semibold px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full">Carro</span>
+                    </div>
+                    <p id="banner-vehicle-details" class="text-xs text-slate-500 mt-0.5">Hyundai • 2023 • Tanque: 50L</p>
+                </div>
+            </div>
+            <button onclick="openGarageModal()" class="text-xs font-semibold text-slate-600 hover:text-emerald-600 bg-slate-50 hover:bg-emerald-50 px-3 py-1.5 rounded-xl border border-slate-200 transition">
+                Trocar / Editar Garagem
+            </button>
+        </div>
+
+        <!-- 1) DASHBOARD: Cards de Resumo Rápido -->
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <!-- Média Geral -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 relative overflow-hidden">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Média Geral</span>
+                    <span class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    </span>
+                </div>
+                <div class="flex items-baseline gap-1">
+                    <span id="stat-avg-kml" class="text-2xl sm:text-3xl font-extrabold text-slate-900">--</span>
+                    <span class="text-xs font-bold text-emerald-600">KM/L</span>
+                </div>
+                <p id="stat-last-kml" class="text-[11px] text-slate-400 mt-1">Último: -- km/l</p>
+            </div>
+
+            <!-- Custo por KM -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Custo / KM</span>
+                    <span class="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>
+                    </span>
+                </div>
+                <div class="flex items-baseline gap-1">
+                    <span class="text-xs font-bold text-slate-400">R$</span>
+                    <span id="stat-cost-km" class="text-2xl sm:text-3xl font-extrabold text-slate-900">--</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1">Por quilômetro rodado</p>
+            </div>
+
+            <!-- Total Gasto -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Gasto</span>
+                    <span class="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                    </span>
+                </div>
+                <div class="flex items-baseline gap-1">
+                    <span class="text-xs font-bold text-slate-400">R$</span>
+                    <span id="stat-total-spent" class="text-2xl sm:text-3xl font-extrabold text-slate-900">0,00</span>
+                </div>
+                <p id="stat-month-spent" class="text-[11px] text-slate-400 mt-1">Combustível + Manut.</p>
+            </div>
+
+            <!-- Odômetro Atual -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
+                <div class="flex items-center justify-between mb-2">
+                    <span id="stat-odo-label" class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Odômetro</span>
+                    <span class="p-1.5 bg-slate-100 text-slate-700 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 14l4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>
+                    </span>
+                </div>
+                <div class="flex items-baseline gap-1">
+                    <span id="stat-odometer" class="text-2xl sm:text-3xl font-extrabold text-slate-900">0</span>
+                    <span class="text-xs font-bold text-slate-500">KM</span>
+                </div>
+                <p id="stat-total-km" class="text-[11px] text-slate-400 mt-1">Rodados: 0 km</p>
+            </div>
+        </section>
+
+        <!-- Grid Principal: Formulário (Abastecimento / Manutenção) + Gráfico -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- 2) FORMULÁRIO DE REGISTRO COM ABAS (5 colunas no desktop) -->
+            <section id="form-section" class="lg:col-span-5 bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                <!-- Abas: Abastecimento vs Manutenção -->
+                <div class="flex items-center justify-between gap-2 mb-4 bg-slate-100 p-1 rounded-xl">
+                    <button type="button" id="tab-btn-fuel" onclick="switchFormTab('fuel')" class="flex-1 py-2 px-3 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-sm transition flex items-center justify-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        Abastecimento
+                    </button>
+                    <button type="button" id="tab-btn-maint" onclick="switchFormTab('maint')" class="flex-1 py-2 px-3 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-800 transition flex items-center justify-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                        Manutenção
+                    </button>
+                </div>
+
+                <!-- FORMULÁRIO 1: ABASTECIMENTO -->
+                <form id="fuel-form" class="space-y-3.5">
+                    <!-- Seletor explícito do veículo no formulário -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Veículo</label>
+                        <select id="fuel-vehicle-select" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
+                            <!-- Preenchido via JS -->
+                        </select>
+                    </div>
+
+                    <!-- Data e Combustível -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Data</label>
+                            <input type="date" id="input-date" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Combustível</label>
+                            <select id="input-fuel" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
+                                <option value="Gasolina">Gasolina</option>
+                                <option value="Etanol">Etanol</option>
+                                <option value="Diesel">Diesel</option>
+                                <option value="GNV">GNV (m³)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Odômetro e Litros -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Odômetro Atual (KM)</label>
+                            <input type="number" id="input-odometer" step="1" placeholder="Ex: 45320" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Litros / m³</label>
+                            <input type="number" id="input-liters" step="0.01" min="0.1" placeholder="Ex: 38.50" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
+                        </div>
+                    </div>
+
+                    <!-- Preço por Litro e Valor Total -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Preço / Litro (R$)</label>
+                            <input type="number" id="input-price" step="0.001" min="0.01" placeholder="Ex: 5.89" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Valor Total (R$)</label>
+                            <input type="number" id="input-total" step="0.01" min="0.1" placeholder="Ex: 226.76" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
+                        </div>
+                    </div>
+
+                    <!-- Checkbox Tanque Cheio -->
+                    <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200/70">
+                        <div class="flex items-center gap-2.5">
+                            <input type="checkbox" id="input-fulltank" checked class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer">
+                            <label for="input-fulltank" class="text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                                Tanque Cheio (Completa)
+                            </label>
+                        </div>
+                        <span id="tank-capacity-hint" class="text-[11px] text-slate-400">Cálculo exato</span>
+                    </div>
+
+                    <button type="submit" class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-sm rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        Salvar Abastecimento
+                    </button>
+                </form>
+
+                <!-- FORMULÁRIO 2: MANUTENÇÃO -->
+                <form id="maint-form" class="hidden space-y-3.5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Veículo</label>
+                        <select id="maint-vehicle-select" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition">
+                            <!-- Preenchido via JS -->
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Data</label>
+                            <input type="date" id="maint-date" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Categoria</label>
+                            <select id="maint-category" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition">
+                                <option value="Troca de Óleo">Troca de Óleo</option>
+                                <option value="Revisão Geral">Revisão Geral</option>
+                                <option value="Pneus / Alinhamento">Pneus / Alinhamento</option>
+                                <option value="Freios">Freios</option>
+                                <option value="Bateria / Elétrica">Bateria / Elétrica</option>
+                                <option value="Documentação / Seguro">Doc / Seguro</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Odômetro (KM)</label>
+                            <input type="number" id="maint-odometer" step="1" placeholder="Ex: 45500" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Valor Pago (R$)</label>
+                            <input type="number" id="maint-cost" step="0.01" min="0" placeholder="Ex: 280.00" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Descrição / Oficina</label>
+                        <input type="text" id="maint-notes" placeholder="Ex: Óleo 5W30 sintético + filtro" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition">
+                    </div>
+
+                    <button type="submit" class="w-full py-3 px-4 bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-bold text-sm rounded-xl shadow-md shadow-amber-600/20 transition flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        Salvar Manutenção
+                    </button>
+                </form>
+            </section>
+
+            <!-- 5) GRÁFICO DE EVOLUÇÃO DE CONSUMO (7 colunas no desktop) -->
+            <section class="lg:col-span-7 bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                    <div>
+                        <h2 id="chart-title" class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <span class="w-2 h-5 bg-slate-800 rounded-full"></span>
+                            Evolução do Consumo (KM/L)
+                        </h2>
+                        <p id="chart-subtitle" class="text-xs text-slate-400 mt-0.5">Desempenho calculado entre abastecimentos de tanque cheio</p>
+                    </div>
+                    <div id="chart-badge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Eficiência Monitorada
+                    </div>
+                </div>
+
+                <!-- Container Responsivo do Canvas -->
+                <div class="relative w-full h-56 sm:h-64">
+                    <canvas id="consumptionChart"></canvas>
+                    <div id="empty-chart-msg" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-4 bg-slate-50/80 rounded-xl">
+                        <p class="text-sm font-semibold text-slate-600">Dados insuficientes para o gráfico</p>
+                        <p class="text-xs text-slate-400 mt-1">Registre pelo menos 2 abastecimentos com tanque cheio para o veículo selecionado.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- 3) HISTÓRICO DE ABASTECIMENTOS E MANUTENÇÕES -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+            <div class="p-5 sm:px-6 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">Histórico de Registros</h2>
+                        <p class="text-xs text-slate-400">Filtrado pelo veículo selecionado na garagem</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="bg-slate-100 p-1 rounded-xl flex text-xs font-semibold">
+                        <button onclick="setHistoryFilter('all')" id="filter-all" class="px-2.5 py-1 rounded-lg bg-white text-slate-900 shadow-sm transition">Todos</button>
+                        <button onclick="setHistoryFilter('fuel')" id="filter-fuel" class="px-2.5 py-1 rounded-lg text-slate-500 hover:text-slate-800 transition">Abastec.</button>
+                        <button onclick="setHistoryFilter('maint')" id="filter-maint" class="px-2.5 py-1 rounded-lg text-slate-500 hover:text-slate-800 transition">Manut.</button>
+                    </div>
+                    <span id="records-count" class="text-xs font-semibold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full">0</span>
+                </div>
+            </div>
+
+            <!-- Tabela Responsiva -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200/80">
+                            <th class="py-3.5 px-4 sm:px-6">Data</th>
+                            <th class="py-3.5 px-4">Veículo</th>
+                            <th class="py-3.5 px-4">Tipo / Detalhe</th>
+                            <th class="py-3.5 px-4">Odômetro</th>
+                            <th class="py-3.5 px-4">Qtd / Info</th>
+                            <th class="py-3.5 px-4">Total Pago</th>
+                            <th class="py-3.5 px-4">Consumo / Status</th>
+                            <th class="py-3.5 px-4 text-right sm:px-6">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-tbody" class="divide-y divide-slate-100 text-sm">
+                        <!-- Linhas injetadas via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Estado Vazio -->
+            <div id="empty-history" class="hidden py-12 px-4 text-center">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-100 text-slate-400 mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </div>
+                <h3 class="text-sm font-bold text-slate-700">Nenhum registro encontrado</h3>
+                <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto">Adicione um abastecimento ou manutenção acima para este veículo.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Botão Flutuante Mobile para ir rápido ao formulário -->
+    <button onclick="scrollToForm()" class="md:hidden fixed bottom-5 right-5 z-30 bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-full shadow-xl shadow-emerald-600/30 flex items-center justify-center active:scale-95 transition" aria-label="Novo Registro">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    </button>
+
+    <!-- MODAL GERENCIADOR DE VEÍCULOS ("Meus Veículos" / "+ Novo Veículo") -->
+    <div id="garage-modal" class="hidden fixed inset-0 z-50 bg-slate-900/65 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 my-auto max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">Minha Garagem</h3>
+                        <p class="text-xs text-slate-400">Cadastre, edite ou selecione seus veículos</p>
+                    </div>
+                </div>
+                <button onclick="closeGarageModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+
+            <!-- Lista de Veículos Cadastrados -->
+            <div class="mt-4">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5">Veículos Cadastrados</h4>
+                <div id="garage-vehicles-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <!-- Cards dos veículos via JS -->
+                </div>
+            </div>
+
+            <!-- Formulário de Cadastro / Edição de Veículo -->
+            <form id="vehicle-form" class="mt-6 pt-5 border-t border-slate-100 space-y-3.5">
+                <div class="flex items-center justify-between">
+                    <h4 id="vehicle-form-title" class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <span class="w-2 h-4 bg-emerald-500 rounded-full"></span>
+                        Cadastrar Novo Veículo
+                    </h4>
+                    <button type="button" id="cancel-edit-vehicle-btn" onclick="resetVehicleForm()" class="hidden text-xs font-semibold text-slate-500 hover:text-slate-800 underline">
+                        Cancelar edição
+                    </button>
+                </div>
+
+                <input type="hidden" id="veh-id">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Apelido / Modelo *</label>
+                        <input type="text" id="veh-name" placeholder="Ex: Fiat Pulse 1.3" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Marca / Ano *</label>
+                        <input type="text" id="veh-brand-year" placeholder="Ex: Fiat • 2024" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Categoria *</label>
+                        <select id="veh-type" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="Carro">Carro</option>
+                            <option value="Moto">Moto</option>
+                            <option value="Caminhonete/SUV">Caminhonete/SUV</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tanque (Litros)</label>
+                        <input type="number" id="veh-tank" step="1" min="1" placeholder="Ex: 47" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Placa (Opcional)</label>
+                        <input type="text" id="veh-plate" maxlength="8" placeholder="ABC-1D23" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                </div>
+
+                <div class="pt-1 flex justify-end gap-2">
+                    <button type="submit" id="veh-submit-btn" class="w-full sm:w-auto px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-xl transition flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        Salvar Veículo na Garagem
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Configurações / Gerenciamento de Dados -->
+    <div id="settings-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-slate-900">Gerenciar Dados</h3>
+                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            
+            <p class="text-xs text-slate-500 mb-5 leading-relaxed">
+                Seus veículos, abastecimentos e manutenções ficam salvos localmente no navegador deste dispositivo.
+            </p>
+
+            <div class="space-y-3">
+                <button onclick="exportToCSV(); closeSettingsModal();" class="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2">
+                    Baixar Planilha Completa (CSV)
+                </button>
+                <button onclick="loadSampleData(); closeSettingsModal();" class="w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-sm font-semibold rounded-xl transition">
+                    Restaurar Veículos e Dados de Exemplo
+                </button>
+                <button onclick="clearAllData(); closeSettingsModal();" class="w-full py-2.5 px-4 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-sm font-semibold rounded-xl transition">
+                    Apagar Todos os Registros (Manter Veículos)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast de Notificação (Substitui alert()) -->
+    <div id="toast-container" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col gap-2 w-max max-w-[90vw]"></div>
+
+    <!-- Lógica Completa da Aplicação -->
+    <script>
+        // Chaves de armazenamento local
+        const VEHICLES_KEY = 'autotrack_vehicles_v2';
+        const FUEL_KEY = 'autotrack_fuel_records_v2';
+        const MAINT_KEY = 'autotrack_maint_records_v2';
+        const SELECTED_VEH_KEY = 'autotrack_selected_vehicle_v2';
+
+        let vehicles = [];
+        let fuelRecords = [];
+        let maintRecords = [];
+        let selectedVehicleId = 'veh-hb20'; // Pode ser um ID específico ou 'ALL'
+        let historyFilter = 'all'; // 'all', 'fuel', 'maint'
+        let consumptionChartInstance = null;
+
+        // 2 Veículos pré-cadastrados de exemplo
+        const SAMPLE_VEHICLES = [
+            {
+                id: 'veh-hb20',
+                name: 'HB20 1.0 Sense',
+                brandYear: 'Hyundai • 2023',
+                type: 'Carro',
+                tankCapacity: 50,
+                plate: 'RJA-4B21'
+            },
+            {
+                id: 'veh-cg160',
+                name: 'Honda CG 160 Titan',
+                brandYear: 'Honda • 2024',
+                type: 'Moto',
+                tankCapacity: 16,
+                plate: 'KLM-9E88'
+            }
+        ];
+
+        // Registros de abastecimento realistas vinculados aos 2 veículos
+        const SAMPLE_FUEL_RECORDS = [
+            // HB20
+            {
+                id: 'fuel-1',
+                vehicleId: 'veh-hb20',
+                date: getRelativeDate(-32),
+                fuel: 'Gasolina',
+                odometer: 28120,
+                liters: 41.50,
+                pricePerLiter: 5.89,
+                totalPaid: 244.44,
+                fullTank: true
+            },
+            {
+                id: 'fuel-2',
+                vehicleId: 'veh-hb20',
+                date: getRelativeDate(-18),
+                fuel: 'Gasolina',
+                odometer: 28640,
+                liters: 39.20,
+                pricePerLiter: 5.95,
+                totalPaid: 233.24,
+                fullTank: true
+            },
+            {
+                id: 'fuel-3',
+                vehicleId: 'veh-hb20',
+                date: getRelativeDate(-4),
+                fuel: 'Etanol',
+                odometer: 29185,
+                liters: 40.00,
+                pricePerLiter: 3.99,
+                totalPaid: 159.60,
+                fullTank: true
+            },
+            // CG 160 Titan
+            {
+                id: 'fuel-4',
+                vehicleId: 'veh-cg160',
+                date: getRelativeDate(-21),
+                fuel: 'Gasolina',
+                odometer: 8410,
+                liters: 12.40,
+                pricePerLiter: 5.89,
+                totalPaid: 73.04,
+                fullTank: true
+            },
+            {
+                id: 'fuel-5',
+                vehicleId: 'veh-cg160',
+                date: getRelativeDate(-9),
+                fuel: 'Gasolina',
+                odometer: 8895,
+                liters: 12.80,
+                pricePerLiter: 5.92,
+                totalPaid: 75.78,
+                fullTank: true
+            },
+            {
+                id: 'fuel-6',
+                vehicleId: 'veh-cg160',
+                date: getRelativeDate(-1),
+                fuel: 'Gasolina',
+                odometer: 9390,
+                liters: 12.50,
+                pricePerLiter: 5.95,
+                totalPaid: 74.38,
+                fullTank: true
+            }
+        ];
+
+        const SAMPLE_MAINT_RECORDS = [
+            {
+                id: 'maint-1',
+                vehicleId: 'veh-hb20',
+                date: getRelativeDate(-15),
+                category: 'Troca de Óleo',
+                odometer: 28700,
+                cost: 290.00,
+                notes: 'Óleo 5W30 Sintético + Filtro de Óleo e Ar'
+            },
+            {
+                id: 'maint-2',
+                vehicleId: 'veh-cg160',
+                date: getRelativeDate(-10),
+                category: 'Revisão Geral',
+                odometer: 8850,
+                cost: 115.00,
+                notes: 'Troca de óleo Mobil + lubrificação relação'
+            }
+        ];
+
+        function getRelativeDate(daysOffset) {
+            const d = new Date();
+            d.setDate(d.getDate() + daysOffset);
+            return d.toISOString().split('T')[0];
+        }
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('input-date').value = today;
+            document.getElementById('maint-date').value = today;
+            
+            loadAllData();
+            setupAutoCalculations();
+            renderApp();
+        });
+
+        function loadAllData() {
+            try {
+                const storedVeh = localStorage.getItem(VEHICLES_KEY);
+                const storedFuel = localStorage.getItem(FUEL_KEY);
+                const storedMaint = localStorage.getItem(MAINT_KEY);
+                const storedSelected = localStorage.getItem(SELECTED_VEH_KEY);
+
+                if (storedVeh !== null) {
+                    vehicles = JSON.parse(storedVeh);
+                    fuelRecords = storedFuel ? JSON.parse(storedFuel) : [];
+                    maintRecords = storedMaint ? JSON.parse(storedMaint) : [];
+                } else {
+                    vehicles = [...SAMPLE_VEHICLES];
+                    fuelRecords = [...SAMPLE_FUEL_RECORDS];
+                    maintRecords = [...SAMPLE_MAINT_RECORDS];
+                    saveAllData();
+                }
+
+                if (vehicles.length === 0) {
+                    vehicles = [...SAMPLE_VEHICLES];
+                    saveAllData();
+                }
+
+                if (storedSelected && (storedSelected === 'ALL' || vehicles.some(v => v.id === storedSelected))) {
+                    selectedVehicleId = storedSelected;
+                } else {
+                    selectedVehicleId = vehicles[0].id;
+                }
+            } catch (e) {
+                console.error('Erro ao carregar dados:', e);
+                vehicles = [...SAMPLE_VEHICLES];
+                fuelRecords = [...SAMPLE_FUEL_RECORDS];
+                maintRecords = [...SAMPLE_MAINT_RECORDS];
+                selectedVehicleId = vehicles[0].id;
+            }
+        }
+
+        function saveAllData() {
+            try {
+                localStorage.setItem(VEHICLES_KEY, JSON.stringify(vehicles));
+                localStorage.setItem(FUEL_KEY, JSON.stringify(fuelRecords));
+                localStorage.setItem(MAINT_KEY, JSON.stringify(maintRecords));
+                localStorage.setItem(SELECTED_VEH_KEY, selectedVehicleId);
+            } catch (e) {
+                showToast('Erro ao salvar dados no navegador.', 'error');
+            }
+        }
+
+        // Troca de veículo no seletor do topo
+        function handleVehicleChange(val) {
+            selectedVehicleId = val;
+            localStorage.setItem(SELECTED_VEH_KEY, selectedVehicleId);
+            renderApp();
+        }
+
+        // Sincronização automática Litros x Preço x Total
+        function setupAutoCalculations() {
+            const litersEl = document.getElementById('input-liters');
+            const priceEl = document.getElementById('input-price');
+            const totalEl = document.getElementById('input-total');
+
+            const updateFromPrice = () => {
+                const l = parseFloat(litersEl.value);
+                const p = parseFloat(priceEl.value);
+                if (!isNaN(l) && !isNaN(p) && l > 0 && p > 0) {
+                    totalEl.value = (l * p).toFixed(2);
+                }
+            };
+
+            const updateFromTotal = () => {
+                const l = parseFloat(litersEl.value);
+                const t = parseFloat(totalEl.value);
+                if (!isNaN(l) && !isNaN(t) && l > 0 && t > 0) {
+                    priceEl.value = (t / l).toFixed(3);
+                }
+            };
+
+            litersEl.addEventListener('input', updateFromPrice);
+            priceEl.addEventListener('input', updateFromPrice);
+            totalEl.addEventListener('input', updateFromTotal);
+        }
+
+        // Alterna abas do formulário (Abastecimento / Manutenção)
+        function switchFormTab(tab) {
+            const fuelForm = document.getElementById('fuel-form');
+            const maintForm = document.getElementById('maint-form');
+            const btnFuel = document.getElementById('tab-btn-fuel');
+            const btnMaint = document.getElementById('tab-btn-maint');
+
+            if (tab === 'fuel') {
+                fuelForm.classList.remove('hidden');
+                maintForm.classList.add('hidden');
+                btnFuel.className = 'flex-1 py-2 px-3 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-sm transition flex items-center justify-center gap-1.5';
+                btnMaint.className = 'flex-1 py-2 px-3 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-800 transition flex items-center justify-center gap-1.5';
+            } else {
+                fuelForm.classList.add('hidden');
+                maintForm.classList.remove('hidden');
+                btnMaint.className = 'flex-1 py-2 px-3 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-sm transition flex items-center justify-center gap-1.5';
+                btnFuel.className = 'flex-1 py-2 px-3 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-800 transition flex items-center justify-center gap-1.5';
+            }
+        }
+
+        // Submissão: Novo Abastecimento
+        document.getElementById('fuel-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const vehicleId = document.getElementById('fuel-vehicle-select').value;
+            const date = document.getElementById('input-date').value;
+            const fuel = document.getElementById('input-fuel').value;
+            const odometer = parseFloat(document.getElementById('input-odometer').value);
+            const liters = parseFloat(document.getElementById('input-liters').value);
+            const pricePerLiter = parseFloat(document.getElementById('input-price').value);
+            const totalPaid = parseFloat(document.getElementById('input-total').value);
+            const fullTank = document.getElementById('input-fulltank').checked;
+
+            if (!vehicleId || isNaN(odometer) || isNaN(liters) || liters <= 0) {
+                showToast('Preencha todos os campos corretamente.', 'error');
+                return;
+            }
+
+            // Verifica odômetro apenas dentro do mesmo veículo
+            const vehRecords = fuelRecords.filter(r => r.vehicleId === vehicleId).sort((a, b) => a.odometer - b.odometer);
+            if (vehRecords.length > 0) {
+                const maxOdo = vehRecords[vehRecords.length - 1].odometer;
+                if (odometer <= maxOdo) {
+                    showToast(`Aviso: Odômetro menor ou igual ao último deste veículo (${maxOdo} km).`, 'warning');
+                }
+            }
+
+            fuelRecords.push({
+                id: 'fuel-' + Date.now(),
+                vehicleId,
+                date,
+                fuel,
+                odometer,
+                liters,
+                pricePerLiter,
+                totalPaid,
+                fullTank
+            });
+
+            // Se estava vendo outro veículo específico, muda o foco para o veículo recém-abastecido
+            if (selectedVehicleId !== 'ALL' && selectedVehicleId !== vehicleId) {
+                selectedVehicleId = vehicleId;
+            }
+
+            saveAllData();
+            renderApp();
+
+            document.getElementById('input-odometer').value = '';
+            document.getElementById('input-liters').value = '';
+            document.getElementById('input-price').value = '';
+            document.getElementById('input-total').value = '';
+
+            const vehName = getVehicleById(vehicleId)?.name || 'Veículo';
+            showToast(`Abastecimento salvo para ${vehName}!`, 'success');
+        });
+
+        // Submissão: Nova Manutenção
+        document.getElementById('maint-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const vehicleId = document.getElementById('maint-vehicle-select').value;
+            const date = document.getElementById('maint-date').value;
+            const category = document.getElementById('maint-category').value;
+            const odometer = parseFloat(document.getElementById('maint-odometer').value);
+            const cost = parseFloat(document.getElementById('maint-cost').value);
+            const notes = document.getElementById('maint-notes').value.trim();
+
+            if (!vehicleId || isNaN(odometer) || isNaN(cost)) {
+                showToast('Preencha os dados da manutenção corretamente.', 'error');
+                return;
+            }
+
+            maintRecords.push({
+                id: 'maint-' + Date.now(),
+                vehicleId,
+                date,
+                category,
+                odometer,
+                cost,
+                notes
+            });
+
+            if (selectedVehicleId !== 'ALL' && selectedVehicleId !== vehicleId) {
+                selectedVehicleId = vehicleId;
+            }
+
+            saveAllData();
+            renderApp();
+
+            document.getElementById('maint-odometer').value = '';
+            document.getElementById('maint-cost').value = '';
+            document.getElementById('maint-notes').value = '';
+
+            const vehName = getVehicleById(vehicleId)?.name || 'Veículo';
+            showToast(`Manutenção registrada para ${vehName}!`, 'success');
+        });
+
+        // Excluir registro (abastecimento ou manutenção)
+        function deleteItem(type, id) {
+            if (type === 'fuel') {
+                fuelRecords = fuelRecords.filter(r => r.id !== id);
+            } else {
+                maintRecords = maintRecords.filter(r => r.id !== id);
+            }
+            saveAllData();
+            renderApp();
+            showToast('Registro removido.', 'info');
+        }
+
+        // --- GERENCIAMENTO DA GARAGEM (CRUD VEÍCULOS) ---
+        document.getElementById('vehicle-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const editId = document.getElementById('veh-id').value;
+            const name = document.getElementById('veh-name').value.trim();
+            const brandYear = document.getElementById('veh-brand-year').value.trim();
+            const type = document.getElementById('veh-type').value;
+            const tankCapacity = parseFloat(document.getElementById('veh-tank').value) || null;
+            const plate = document.getElementById('veh-plate').value.trim().toUpperCase();
+
+            if (!name || !brandYear) return;
+
+            if (editId) {
+                // Edição
+                const idx = vehicles.findIndex(v => v.id === editId);
+                if (idx !== -1) {
+                    vehicles[idx] = { ...vehicles[idx], name, brandYear, type, tankCapacity, plate };
+                    showToast(`Veículo "${name}" atualizado!`, 'success');
+                }
+            } else {
+                // Novo cadastro
+                const newId = 'veh-' + Date.now();
+                vehicles.push({
+                    id: newId,
+                    name,
+                    brandYear,
+                    type,
+                    tankCapacity,
+                    plate
+                });
+                selectedVehicleId = newId;
+                showToast(`Veículo "${name}" adicionado à garagem!`, 'success');
+            }
+
+            resetVehicleForm();
+            saveAllData();
+            renderApp();
+            renderGarageList();
+        });
+
+        function editVehicle(id) {
+            const veh = getVehicleById(id);
+            if (!veh) return;
+
+            document.getElementById('veh-id').value = veh.id;
+            document.getElementById('veh-name').value = veh.name;
+            document.getElementById('veh-brand-year').value = veh.brandYear;
+            document.getElementById('veh-type').value = veh.type;
+            document.getElementById('veh-tank').value = veh.tankCapacity || '';
+            document.getElementById('veh-plate').value = veh.plate || '';
+
+            document.getElementById('vehicle-form-title').innerHTML = `<span class="w-2 h-4 bg-amber-500 rounded-full"></span> Editando: ${veh.name}`;
+            document.getElementById('veh-submit-btn').textContent = 'Atualizar Veículo';
+            document.getElementById('cancel-edit-vehicle-btn').classList.remove('hidden');
+            document.getElementById('veh-name').focus();
+        }
+
+        function resetVehicleForm() {
+            document.getElementById('vehicle-form').reset();
+            document.getElementById('veh-id').value = '';
+            document.getElementById('vehicle-form-title').innerHTML = `<span class="w-2 h-4 bg-emerald-500 rounded-full"></span> Cadastrar Novo Veículo`;
+            document.getElementById('veh-submit-btn').innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Salvar Veículo na Garagem`;
+            document.getElementById('cancel-edit-vehicle-btn').classList.add('hidden');
+        }
+
+        function deleteVehicle(id) {
+            if (vehicles.length <= 1) {
+                showToast('Você precisa manter pelo menos 1 veículo na garagem.', 'warning');
+                return;
+            }
+
+            const veh = getVehicleById(id);
+            vehicles = vehicles.filter(v => v.id !== id);
+            fuelRecords = fuelRecords.filter(r => r.vehicleId !== id);
+            maintRecords = maintRecords.filter(r => r.vehicleId !== id);
+
+            if (selectedVehicleId === id) {
+                selectedVehicleId = vehicles[0].id;
+            }
+
+            saveAllData();
+            renderApp();
+            renderGarageList();
+            showToast(`Veículo "${veh?.name}" e seus registros foram removidos.`, 'info');
+        }
+
+        function selectVehicleFromGarage(id) {
+            selectedVehicleId = id;
+            localStorage.setItem(SELECTED_VEH_KEY, selectedVehicleId);
+            renderApp();
+            closeGarageModal();
+        }
+
+        function renderGarageList() {
+            const container = document.getElementById('garage-vehicles-list');
+            container.innerHTML = vehicles.map(v => {
+                const isSelected = selectedVehicleId === v.id;
+                const countFuel = fuelRecords.filter(r => r.vehicleId === v.id).length;
+                const countMaint = maintRecords.filter(r => r.vehicleId === v.id).length;
+
+                return `
+                    <div class="p-3.5 rounded-xl border ${isSelected ? 'border-emerald-500 bg-emerald-50/40' : 'border-slate-200 bg-slate-50/60'} flex flex-col justify-between gap-2.5 transition">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-center gap-2.5 cursor-pointer" onclick="selectVehicleFromGarage('${v.id}')">
+                                <div class="p-2 rounded-lg ${isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'}">
+                                    ${getVehicleSvgIcon(v.type, 'w-4 h-4')}
+                                </div>
+                                <div>
+                                    <div class="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                                        ${v.name}
+                                        ${isSelected ? '<span class="text-[10px] bg-emerald-600 text-white px-1.5 py-0.2 rounded">Ativo</span>' : ''}
+                                    </div>
+                                    <div class="text-xs text-slate-500">${v.brandYear} ${v.plate ? '• ' + v.plate : ''}</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <button type="button" onclick="editVehicle('${v.id}')" title="Editar" class="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-white rounded-lg transition">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </button>
+                                <button type="button" onclick="deleteVehicle('${v.id}')" title="Excluir" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-white rounded-lg transition">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-200/60">
+                            <span>${v.type} ${v.tankCapacity ? `• Tanque ${v.tankCapacity}L` : ''}</span>
+                            <span>${countFuel} abast. • ${countMaint} manut.</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- CÁLCULOS ISOLADOS POR VEÍCULO ---
+        function calculateMetricsForVehicle(vehicleId) {
+            const vehFuel = fuelRecords.filter(r => r.vehicleId === vehicleId);
+            const chronological = [...vehFuel].sort((a, b) => {
+                if (a.odometer !== b.odometer) return a.odometer - b.odometer;
+                return new Date(a.date) - new Date(b.date);
+            });
+
+            let totalValidKm = 0;
+            let totalValidLiters = 0;
+            let totalValidCost = 0;
+
+            let accumulatedLiters = 0;
+            let accumulatedCost = 0;
+            let lastFullTankOdometer = null;
+
+            const enriched = chronological.map((rec, index) => {
+                let kml = null;
+                let costPerKm = null;
+                let distance = null;
+
+                if (index === 0) {
+                    if (rec.fullTank) lastFullTankOdometer = rec.odometer;
+                } else {
+                    accumulatedLiters += rec.liters;
+                    accumulatedCost += rec.totalPaid;
+
+                    if (rec.fullTank && lastFullTankOdometer !== null) {
+                        distance = rec.odometer - lastFullTankOdometer;
+                        if (distance > 0 && accumulatedLiters > 0) {
+                            kml = distance / accumulatedLiters;
+                            costPerKm = accumulatedCost / distance;
+
+                            totalValidKm += distance;
+                            totalValidLiters += accumulatedLiters;
+                            totalValidCost += accumulatedCost;
+                        }
+                        lastFullTankOdometer = rec.odometer;
+                        accumulatedLiters = 0;
+                        accumulatedCost = 0;
+                    } else if (rec.fullTank && lastFullTankOdometer === null) {
+                        lastFullTankOdometer = rec.odometer;
+                        accumulatedLiters = 0;
+                        accumulatedCost = 0;
+                    }
+                }
+
+                return { ...rec, kml, costPerKm, distance };
+            });
+
+            const vehMaint = maintRecords.filter(r => r.vehicleId === vehicleId);
+            const fuelSpent = vehFuel.reduce((acc, r) => acc + r.totalPaid, 0);
+            const maintSpent = vehMaint.reduce((acc, r) => acc + r.cost, 0);
+
+            const allOdos = [
+                ...vehFuel.map(r => r.odometer),
+                ...vehMaint.map(r => r.odometer)
+            ];
+            const latestOdometer = allOdos.length > 0 ? Math.max(...allOdos) : 0;
+            const firstOdometer = allOdos.length > 0 ? Math.min(...allOdos) : 0;
+
+            return {
+                enrichedFuel: enriched,
+                totalValidKm,
+                totalValidLiters,
+                totalValidCost,
+                avgKml: totalValidLiters > 0 ? totalValidKm / totalValidLiters : null,
+                avgCostKm: totalValidKm > 0 ? totalValidCost / totalValidKm : null,
+                fuelSpent,
+                maintSpent,
+                totalSpent: fuelSpent + maintSpent,
+                latestOdometer,
+                totalDriven: Math.max(0, latestOdometer - firstOdometer)
+            };
+        }
+
+        function calculateAllMetrics() {
+            if (selectedVehicleId !== 'ALL') {
+                const m = calculateMetricsForVehicle(selectedVehicleId);
+                const validKml = m.enrichedFuel.filter(r => r.kml !== null);
+                return {
+                    ...m,
+                    lastKml: validKml.length > 0 ? validKml[validKml.length - 1].kml : null,
+                    isAll: false
+                };
+            }
+
+            // Modo Consolidado ("Todos os Veículos"): calcula cada carro isoladamente e soma os totais sem misturar odômetros!
+            let sumValidKm = 0;
+            let sumValidLiters = 0;
+            let sumValidCost = 0;
+            let sumFuelSpent = 0;
+            let sumMaintSpent = 0;
+            let sumDriven = 0;
+            let allEnrichedFuel = [];
+
+            vehicles.forEach(v => {
+                const m = calculateMetricsForVehicle(v.id);
+                sumValidKm += m.totalValidKm;
+                sumValidLiters += m.totalValidLiters;
+                sumValidCost += m.totalValidCost;
+                sumFuelSpent += m.fuelSpent;
+                sumMaintSpent += m.maintSpent;
+                sumDriven += m.totalDriven;
+                allEnrichedFuel = allEnrichedFuel.concat(m.enrichedFuel);
+            });
+
+            allEnrichedFuel.sort((a, b) => new Date(a.date) - new Date(b.date));
+            const validKml = allEnrichedFuel.filter(r => r.kml !== null);
+
+            return {
+                enrichedFuel: allEnrichedFuel,
+                avgKml: sumValidLiters > 0 ? sumValidKm / sumValidLiters : null,
+                lastKml: validKml.length > 0 ? validKml[validKml.length - 1].kml : null,
+                avgCostKm: sumValidKm > 0 ? sumValidCost / sumValidKm : null,
+                fuelSpent: sumFuelSpent,
+                maintSpent: sumMaintSpent,
+                totalSpent: sumFuelSpent + sumMaintSpent,
+                latestOdometer: vehicles.length,
+                totalDriven: sumDriven,
+                isAll: true
+            };
+        }
+
+        // --- RENDERIZAÇÃO GERAL ---
+        function renderApp() {
+            populateVehicleSelects();
+            updateActiveVehicleBanner();
+
+            const metrics = calculateAllMetrics();
+
+            // 1. Atualiza Cards do Dashboard
+            document.getElementById('stat-avg-kml').textContent = metrics.avgKml ? metrics.avgKml.toFixed(1).replace('.', ',') : '--';
+            document.getElementById('stat-last-kml').textContent = metrics.lastKml
+                ? `Último: ${metrics.lastKml.toFixed(1).replace('.', ',')} km/l`
+                : 'Aguardando 2º tanque cheio';
+
+            document.getElementById('stat-cost-km').textContent = metrics.avgCostKm ? metrics.avgCostKm.toFixed(2).replace('.', ',') : '--';
+
+            document.getElementById('stat-total-spent').textContent = formatCurrency(metrics.totalSpent);
+            document.getElementById('stat-month-spent').textContent = `Comb: R$ ${formatCurrency(metrics.fuelSpent)} | Manut: R$ ${formatCurrency(metrics.maintSpent)}`;
+
+            if (metrics.isAll) {
+                document.getElementById('stat-odo-label').textContent = 'Frota Ativa';
+                document.getElementById('stat-odometer').textContent = vehicles.length;
+                document.getElementById('stat-odometer').nextElementSibling.textContent = vehicles.length === 1 ? 'VEÍCULO' : 'VEÍCULOS';
+                document.getElementById('stat-total-km').textContent = `Total monitorado: ${metrics.totalDriven.toLocaleString('pt-BR')} km`;
+            } else {
+                document.getElementById('stat-odo-label').textContent = 'Odômetro';
+                document.getElementById('stat-odometer').textContent = metrics.latestOdometer.toLocaleString('pt-BR');
+                document.getElementById('stat-odometer').nextElementSibling.textContent = 'KM';
+                document.getElementById('stat-total-km').textContent = `Período: +${metrics.totalDriven.toLocaleString('pt-BR')} km`;
+
+                if (metrics.latestOdometer > 0) {
+                    document.getElementById('input-odometer').placeholder = `> ${metrics.latestOdometer}`;
+                    document.getElementById('maint-odometer').placeholder = `> ${metrics.latestOdometer}`;
+                }
+            }
+
+            // 2. Atualiza Histórico Unificado
+            renderUnifiedHistory(metrics.enrichedFuel);
+
+            // 3. Atualiza Gráfico
+            renderChart(metrics.enrichedFuel);
+        }
+
+        function populateVehicleSelects() {
+            const headerSelect = document.getElementById('header-vehicle-select');
+            const fuelSelect = document.getElementById('fuel-vehicle-select');
+            const maintSelect = document.getElementById('maint-vehicle-select');
+
+            // Header Select (inclui opção "Todos os Veículos")
+            headerSelect.innerHTML = vehicles.map(v =>
+                `<option value="${v.id}" class="bg-slate-900 text-white">${v.name}</option>`
+            ).join('') + `<option value="ALL" class="bg-slate-900 text-emerald-400 font-bold">📊 Todos os Veículos (${vehicles.length})</option>`;
+            headerSelect.value = selectedVehicleId;
+
+            // Form Selects (apenas veículos reais)
+            const formOptions = vehicles.map(v =>
+                `<option value="${v.id}">${v.name} ${v.plate ? '(' + v.plate + ')' : ''}</option>`
+            ).join('');
+            fuelSelect.innerHTML = formOptions;
+            maintSelect.innerHTML = formOptions;
+
+            const defaultFormVeh = selectedVehicleId === 'ALL' ? vehicles[0].id : selectedVehicleId;
+            fuelSelect.value = defaultFormVeh;
+            maintSelect.value = defaultFormVeh;
+
+            // Atualiza dica da capacidade do tanque
+            const activeVeh = getVehicleById(defaultFormVeh);
+            const hintEl = document.getElementById('tank-capacity-hint');
+            if (activeVeh && activeVeh.tankCapacity) {
+                hintEl.textContent = `Tanque: ${activeVeh.tankCapacity}L`;
+            } else {
+                hintEl.textContent = 'Cálculo exato';
+            }
+
+            // Atualiza ícone no cabeçalho
+            const headerIcon = document.getElementById('header-vehicle-icon');
+            if (selectedVehicleId === 'ALL') {
+                headerIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`;
+            } else {
+                const v = getVehicleById(selectedVehicleId);
+                headerIcon.innerHTML = getVehicleSvgIcon(v?.type || 'Carro', 'w-4 h-4');
+            }
+        }
+
+        function updateActiveVehicleBanner() {
+            const nameEl = document.getElementById('banner-vehicle-name');
+            const plateEl = document.getElementById('banner-vehicle-plate');
+            const typeEl = document.getElementById('banner-vehicle-type');
+            const detailsEl = document.getElementById('banner-vehicle-details');
+            const iconBox = document.getElementById('banner-icon-box');
+
+            if (selectedVehicleId === 'ALL') {
+                nameEl.textContent = 'Visão Consolidada da Garagem';
+                plateEl.classList.add('hidden');
+                typeEl.textContent = `${vehicles.length} veículos`;
+                detailsEl.textContent = vehicles.map(v => v.name).join(' • ');
+                iconBox.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`;
+                return;
+            }
+
+            const veh = getVehicleById(selectedVehicleId);
+            if (!veh) return;
+
+            nameEl.textContent = veh.name;
+            if (veh.plate) {
+                plateEl.textContent = veh.plate;
+                plateEl.classList.remove('hidden');
+            } else {
+                plateEl.classList.add('hidden');
+            }
+            typeEl.textContent = veh.type;
+            detailsEl.textContent = `${veh.brandYear}${veh.tankCapacity ? ` • Tanque: ${veh.tankCapacity}L` : ''}`;
+            iconBox.innerHTML = getVehicleSvgIcon(veh.type, 'w-5 h-5');
+        }
+
+        function setHistoryFilter(filter) {
+            historyFilter = filter;
+            ['all', 'fuel', 'maint'].forEach(f => {
+                const btn = document.getElementById(`filter-${f}`);
+                if (f === filter) {
+                    btn.className = 'px-2.5 py-1 rounded-lg bg-white text-slate-900 shadow-sm transition';
+                } else {
+                    btn.className = 'px-2.5 py-1 rounded-lg text-slate-500 hover:text-slate-800 transition';
+                }
+            });
+            renderApp();
+        }
+
+        function renderUnifiedHistory(enrichedFuel) {
+            const tbody = document.getElementById('history-tbody');
+            const emptyState = document.getElementById('empty-history');
+            const countBadge = document.getElementById('records-count');
+
+            // Filtra manutenções pelo veículo selecionado
+            const filteredMaint = maintRecords
+                .filter(m => selectedVehicleId === 'ALL' || m.vehicleId === selectedVehicleId)
+                .map(m => ({ ...m, recordType: 'maint' }));
+
+            const taggedFuel = enrichedFuel.map(f => ({ ...f, recordType: 'fuel' }));
+
+            let combined = [];
+            if (historyFilter === 'all') combined = [...taggedFuel, ...filteredMaint];
+            else if (historyFilter === 'fuel') combined = [...taggedFuel];
+            else combined = [...filteredMaint];
+
+            // Ordena do mais recente para o mais antigo
+            combined.sort((a, b) => {
+                const dateDiff = new Date(b.date) - new Date(a.date);
+                if (dateDiff !== 0) return dateDiff;
+                return b.odometer - a.odometer;
+            });
+
+            countBadge.textContent = `${combined.length} ${combined.length === 1 ? 'registro' : 'registros'}`;
+
+            if (combined.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            tbody.innerHTML = combined.map(item => {
+                const veh = getVehicleById(item.vehicleId);
+                const vehName = veh ? veh.name : 'Veículo';
+                const formattedDate = formatDateBR(item.date);
+
+                if (item.recordType === 'fuel') {
+                    const badgeStyle = getFuelBadgeStyle(item.fuel);
+                    let kmlHtml = `<span class="text-xs text-slate-400 italic">${item.fullTank ? 'Base inicial' : 'Parcial'}</span>`;
+                    if (item.kml !== null) {
+                        const kmlColor = item.kml >= 10 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-amber-700 bg-amber-50 border-amber-200';
+                        kmlHtml = `
+                            <div class="flex flex-col">
+                                <span class="inline-flex items-center w-fit px-2 py-0.5 rounded-md text-xs font-bold border ${kmlColor}">
+                                    ${item.kml.toFixed(1).replace('.', ',')} km/l
+                                </span>
+                                <span class="text-[11px] text-slate-400 mt-0.5">R$ ${item.costPerKm.toFixed(2).replace('.', ',')}/km (+${item.distance}km)</span>
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <tr class="hover:bg-slate-50/90 transition">
+                            <td class="py-3.5 px-4 sm:px-6 whitespace-nowrap">
+                                <div class="font-semibold text-slate-800 text-xs sm:text-sm">${formattedDate}</div>
+                                <div class="text-[11px] text-slate-400">${item.fullTank ? 'Tanque cheio' : 'Parcial'}</div>
+                            </td>
+                            <td class="py-3.5 px-4 whitespace-nowrap">
+                                <span class="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">${vehName}</span>
+                            </td>
+                            <td class="py-3.5 px-4 whitespace-nowrap">
+                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${badgeStyle}">
+                                    ⛽ ${item.fuel}
+                                </span>
+                            </td>
+                            <td class="py-3.5 px-4 whitespace-nowrap font-semibold text-slate-700">
+                                ${item.odometer.toLocaleString('pt-BR')} <span class="text-xs font-normal text-slate-400">km</span>
+                            </td>
+                            <td class="py-3.5 px-4 whitespace-nowrap">
+                                <div class="text-slate-800 font-medium">${item.liters.toFixed(2).replace('.', ',')} L</div>
+                                <div class="text-[11px] text-slate-400">R$ ${item.pricePerLiter.toFixed(2).replace('.', ',')}/L</div>
+                            </td>
+                            <td class="py-3.5 px-4 whitespace-nowrap font-bold text-slate-900">
+                                R$ ${formatCurrency(item.totalPaid)}
+                            </td>
+                            <td class="py-3.5 px-4 whitespace-nowrap">
+                                ${kmlHtml}
+                            </td>
+                            <td class="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
+                                <button onclick="deleteItem('fuel', '${item.id}')" title="Excluir" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    // Linha de Manutenção
+                    return `
+                        <tr class="hover:bg-amber-50/30 transition">
+                            <td class="py-3.5 px-4 sm:px-6 whitespace-nowrap">
+                                <div class="font-semibold text-slate-800 text-xs sm:text-sm">${formattedDate}</div>
+                                <div class="text-[11px] text-amber-600 font-medium">Serviço</div>
+                            </td>
+                            <td class="py-3.5 px-4 whitespace-nowrap">
+                                <span class="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">${vehName}</span>
+                            </td>
+                            <td class="py-3.5 px-4 whitespace-nowrap">
+                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                                    🔧 ${item.category}
+                                </span>
+                            </td>
+                            <td class="py-3.5 px-4 whitespace-nowrap font-semibold text-slate-700">
+                                ${item.odometer.toLocaleString('pt-BR')} <span class="text-xs font-normal text-slate-400">km</span>
+                            </td>
+                            <td class="py-3.5 px-4 max-w-[180px] truncate text-xs text-slate-600" title="${item.notes}">
+                                ${item.notes}
+                            </td>
+                            <td class="py-3.5 px-4 whitespace-nowrap font-bold text-amber-700">
+                                R$ ${formatCurrency(item.cost)}
+                            </td>
+                            <td class="py-3.5 px-4 whitespace-nowrap">
+                                <span class="text-xs font-medium text-slate-500">Manutenção</span>
+                            </td>
+                            <td class="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
+                                <button onclick="deleteItem('maint', '${item.id}')" title="Excluir" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }
+            }).join('');
+        }
+
+        // Renderiza gráfico com Chart.js
+        function renderChart(chronologicalRecords) {
+            const validPoints = chronologicalRecords.filter(r => r.kml !== null);
+            const emptyMsg = document.getElementById('empty-chart-msg');
+            const canvas = document.getElementById('consumptionChart');
+
+            if (validPoints.length === 0) {
+                emptyMsg.classList.remove('hidden');
+                if (consumptionChartInstance) {
+                    consumptionChartInstance.destroy();
+                    consumptionChartInstance = null;
+                }
+                return;
+            }
+
+            emptyMsg.classList.add('hidden');
+
+            const labels = validPoints.map(r => {
+                const vName = selectedVehicleId === 'ALL' ? ` • ${getVehicleById(r.vehicleId)?.name.split(' ')[0]}` : '';
+                return `${formatDateBR(r.date).slice(0, 5)} (${r.fuel.slice(0,3)}${vName})`;
+            });
+            const dataValues = validPoints.map(r => Number(r.kml.toFixed(2)));
+
+            if (consumptionChartInstance) {
+                consumptionChartInstance.destroy();
+            }
+
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, 240);
+            gradient.addColorStop(0, 'rgba(16, 185, 129, 0.25)');
+            gradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+
+            consumptionChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Consumo (KM/L)',
+                        data: dataValues,
+                        borderColor: '#10b981',
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#0f172a',
+                        pointBorderColor: '#10b981',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        fill: true,
+                        tension: 0.35
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#0f172a',
+                            titleFont: { family: 'Inter', size: 12 },
+                            bodyFont: { family: 'Inter', size: 13, weight: 'bold' },
+                            padding: 10,
+                            cornerRadius: 10,
+                            callbacks: {
+                                label: (context) => ` ${context.parsed.y.toFixed(2).replace('.', ',')} KM/L`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { family: 'Inter', size: 11 }, color: '#64748b' }
+                        },
+                        y: {
+                            beginAtZero: false,
+                            suggestedMin: Math.max(0, Math.min(...dataValues) - 2),
+                            suggestedMax: Math.max(...dataValues) + 2,
+                            grid: { color: '#f1f5f9' },
+                            ticks: {
+                                font: { family: 'Inter', size: 11 },
+                                color: '#64748b',
+                                callback: (val) => val + ' km/l'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Exportar dados para CSV incluindo a coluna "Veículo"
+        function exportToCSV() {
+            const metrics = calculateAllMetrics();
+            const filteredMaint = maintRecords.filter(m => selectedVehicleId === 'ALL' || m.vehicleId === selectedVehicleId);
+
+            if (metrics.enrichedFuel.length === 0 && filteredMaint.length === 0) {
+                showToast('Não há dados para exportar.', 'warning');
+                return;
+            }
+
+            const headers = [
+                'Data',
+                'Veiculo',
+                'Placa',
+                'Tipo Registro',
+                'Categoria / Combustivel',
+                'Odometro (KM)',
+                'Litros',
+                'Preco/Litro (R$)',
+                'Valor Total (R$)',
+                'Consumo (KM/L)',
+                'Custo/KM (R$)',
+                'Observacoes'
+            ];
+
+            const fuelRows = metrics.enrichedFuel.map(r => {
+                const v = getVehicleById(r.vehicleId);
+                return [
+                    r.date,
+                    v?.name || 'Veiculo',
+                    v?.plate || '',
+                    'Abastecimento',
+                    r.fuel,
+                    r.odometer,
+                    r.liters.toFixed(2).replace('.', ','),
+                    r.pricePerLiter.toFixed(3).replace('.', ','),
+                    r.totalPaid.toFixed(2).replace('.', ','),
+                    r.kml ? r.kml.toFixed(2).replace('.', ',') : '',
+                    r.costPerKm ? r.costPerKm.toFixed(2).replace('.', ',') : '',
+                    r.fullTank ? 'Tanque Cheio' : 'Parcial'
+                ];
+            });
+
+            const maintRows = filteredMaint.map(m => {
+                const v = getVehicleById(m.vehicleId);
+                return [
+                    m.date,
+                    v?.name || 'Veiculo',
+                    v?.plate || '',
+                    'Manutencao',
+                    m.category,
+                    m.odometer,
+                    '',
+                    '',
+                    m.cost.toFixed(2).replace('.', ','),
+                    '',
+                    '',
+                    m.notes.replace(/;/g, ',')
+                ];
+            });
+
+            const allRows = [...fuelRows, ...maintRows].sort((a, b) => new Date(a[0]) - new Date(b[0]));
+
+            const csvContent = '\uFEFF' + [headers.join(';'), ...allRows.map(e => e.join(';'))].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            const filePrefix = selectedVehicleId === 'ALL' ? 'garagem-completa' : (getVehicleById(selectedVehicleId)?.name.toLowerCase().replace(/\s+/g, '-') || 'veiculo');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `autotrack-${filePrefix}-${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showToast('Planilha CSV exportada com sucesso!', 'success');
+        }
+
+        // Auxiliares
+        function getVehicleById(id) {
+            return vehicles.find(v => v.id === id);
+        }
+
+        function getVehicleSvgIcon(type, classes = 'w-5 h-5') {
+            if (type === 'Moto') {
+                return `<svg xmlns="http://www.w3.org/2000/svg" class="${classes}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>`;
+            }
+            if (type === 'Caminhonete/SUV') {
+                return `<svg xmlns="http://www.w3.org/2000/svg" class="${classes}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>`;
+            }
+            return `<svg xmlns="http://www.w3.org/2000/svg" class="${classes}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>`;
+        }
+
+        function getFuelBadgeStyle(fuel) {
+            switch (fuel) {
+                case 'Gasolina': return 'bg-amber-100 text-amber-800';
+                case 'Etanol': return 'bg-emerald-100 text-emerald-800';
+                case 'Diesel': return 'bg-slate-200 text-slate-800';
+                case 'GNV': return 'bg-sky-100 text-sky-800';
+                default: return 'bg-slate-100 text-slate-700';
+            }
+        }
+
+        function formatDateBR(isoDate) {
+            if (!isoDate) return '';
+            const [y, m, d] = isoDate.split('-');
+            return `${d}/${m}/${y}`;
+        }
+
+        function formatCurrency(val) {
+            return val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function scrollToForm() {
+            document.getElementById('form-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function openGarageModal() {
+            renderGarageList();
+            resetVehicleForm();
+            document.getElementById('garage-modal').classList.remove('hidden');
+        }
+
+        function closeGarageModal() {
+            document.getElementById('garage-modal').classList.add('hidden');
+        }
+
+        function openSettingsModal() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        function loadSampleData() {
+            vehicles = [...SAMPLE_VEHICLES];
+            fuelRecords = [...SAMPLE_FUEL_RECORDS];
+            maintRecords = [...SAMPLE_MAINT_RECORDS];
+            selectedVehicleId = vehicles[0].id;
+            saveAllData();
+            renderApp();
+            showToast('Garagem e histórico de exemplo restaurados!', 'success');
+        }
+
+        function clearAllData() {
+            fuelRecords = [];
+            maintRecords = [];
+            saveAllData();
+            renderApp();
+            showToast('Histórico limpo com sucesso.', 'info');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const colors = {
+                success: 'bg-slate-900 text-white border-emerald-500',
+                error: 'bg-red-600 text-white border-red-400',
+                warning: 'bg-amber-600 text-white border-amber-300',
+                info: 'bg-slate-800 text-white border-slate-600'
+            };
+
+            toast.className = `toast-enter px-4 py-3 rounded-xl shadow-xl border-l-4 text-xs sm:text-sm font-medium flex items-center gap-2 ${colors[type] || colors.info}`;
+            toast.textContent = message;
+            
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+    </script>
+</body>
+</html>
