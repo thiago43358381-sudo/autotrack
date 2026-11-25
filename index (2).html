@@ -1,0 +1,2518 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="AutoTrack" />
+  <title>AutoTrack — Controle de Combustível & Manutenção (Offline)</title>
+  <style>
+    /* ==========================================================================
+       DESIGN TOKENS & RESET (100% OFFLINE - ZERO DEPENDÊNCIAS EXTERNAS)
+       ========================================================================== */
+    :root {
+      --bg-app: #f1f5f9;
+      --bg-card: #ffffff;
+      --bg-header: #0f172a;
+      --bg-subtle: #f8fafc;
+      --border-color: #e2e8f0;
+      --border-focus: #10b981;
+      --text-main: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --primary: #10b981;
+      --primary-hover: #059669;
+      --primary-soft: #ecfdf5;
+      --primary-text: #065f46;
+      --amber: #f59e0b;
+      --amber-soft: #fffbeb;
+      --amber-text: #92400e;
+      --blue: #3b82f6;
+      --blue-soft: #eff6ff;
+      --blue-text: #1e40af;
+      --danger: #ef4444;
+      --danger-soft: #fef2f2;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+      --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+      --shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.16);
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      line-height: 1.5;
+      padding-bottom: 84px;
+    }
+
+    button, input, select, textarea {
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      background: none;
+    }
+
+    /* ==========================================================================
+       HEADER & GARAGE SELECTOR
+       ========================================================================== */
+    .app-header {
+      background: var(--bg-header);
+      color: #ffffff;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      box-shadow: var(--shadow-md);
+      border-bottom: 1px solid #1e293b;
+    }
+
+    .header-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-md);
+      background: rgba(16, 185, 129, 0.16);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .offline-pill {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.18);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .offline-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    @media (min-width: 640px) {
+      .header-controls {
+        width: auto;
+        flex-wrap: nowrap;
+      }
+    }
+
+    .vehicle-selector-wrap {
+      flex: 1;
+      min-width: 185px;
+      display: flex;
+      align-items: center;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: var(--radius-md);
+      padding: 0 10px;
+      height: 38px;
+    }
+
+    .vehicle-selector-wrap svg {
+      color: #34d399;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+
+    .vehicle-select {
+      background: transparent;
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 13px;
+      border: none;
+      outline: none;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .vehicle-select option {
+      background: #0f172a;
+      color: #ffffff;
+    }
+
+    .btn-header {
+      height: 38px;
+      padding: 0 12px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    .btn-header:active {
+      transform: scale(0.97);
+    }
+
+    .btn-emerald {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .btn-emerald:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-slate {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+    }
+
+    .btn-slate:hover {
+      background: #334155;
+    }
+
+    /* ==========================================================================
+       MAIN CONTAINER & VEHICLE BANNER
+       ========================================================================== */
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .vehicle-banner {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 14px 18px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .banner-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .banner-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      background: #0f172a;
+      color: #34d399;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .banner-title-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .banner-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .plate-badge {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      color: #334155;
+    }
+
+    .cat-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary-text);
+    }
+
+    .banner-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .btn-outline-sm {
+      padding: 7px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+
+    .btn-outline-sm:hover {
+      border-color: var(--primary);
+      color: var(--primary-text);
+      background: var(--primary-soft);
+    }
+
+    /* ==========================================================================
+       DASHBOARD KPI GRID
+       ========================================================================== */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    @media (min-width: 900px) {
+      .kpi-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+      }
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .kpi-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-secondary);
+    }
+
+    .kpi-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .kpi-icon.green { background: var(--primary-soft); color: var(--primary); }
+    .kpi-icon.amber { background: var(--amber-soft); color: var(--amber); }
+    .kpi-icon.blue { background: var(--blue-soft); color: var(--blue); }
+    .kpi-icon.slate { background: #f1f5f9; color: #334155; }
+
+    .kpi-value-row {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .kpi-value {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+    }
+
+    @media (min-width: 640px) {
+      .kpi-value { font-size: 28px; }
+    }
+
+    .kpi-unit {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .kpi-unit.muted {
+      color: var(--text-muted);
+    }
+
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ==========================================================================
+       WORKSPACE GRID (FORM + CHART)
+       ========================================================================== */
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    @media (min-width: 960px) {
+      .workspace-grid {
+        grid-template-columns: 5fr 7fr;
+        align-items: start;
+      }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Tabs */
+    .segmented-tabs {
+      display: flex;
+      background: #f1f5f9;
+      padding: 4px;
+      border-radius: var(--radius-md);
+      margin-bottom: 16px;
+      gap: 4px;
+    }
+
+    .seg-tab {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .seg-tab.active {
+      background: #ffffff;
+      color: var(--text-main);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .dot.green { background: var(--primary); }
+    .dot.amber { background: var(--amber); }
+
+    /* Form Controls */
+    .form-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+    }
+
+    .form-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .form-row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .field-input {
+      width: 100%;
+      height: 40px;
+      padding: 0 12px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      color: var(--text-main);
+      font-weight: 500;
+      outline: none;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+
+    .field-input:focus {
+      background: #ffffff;
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.14);
+    }
+
+    .field-input.bold { font-weight: 700; }
+    .field-input.emerald { font-weight: 700; color: var(--primary-text); }
+
+    /* Toggle Switch para Completou o Tanque */
+    .toggle-box {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 11px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toggle-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .toggle-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .toggle-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .toggle-desc {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 46px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #cbd5e1;
+      border-radius: 999px;
+      transition: 0.2s;
+    }
+
+    .slider::before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      border-radius: 50%;
+      transition: 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    .switch input:checked + .slider {
+      background-color: var(--primary);
+    }
+
+    .switch input:checked + .slider::before {
+      transform: translateX(20px);
+    }
+
+    /* Seletor de Nível do Marcador (quando parcial) */
+    .gauge-panel {
+      border-top: 1px dashed #cbd5e1;
+      padding-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .gauge-pills {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 5px;
+    }
+
+    .gauge-btn {
+      padding: 6px 4px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      background: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-align: center;
+      transition: all 0.15s;
+    }
+
+    .gauge-btn.selected {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+    }
+
+    .gauge-hint {
+      font-size: 11px;
+      color: var(--text-secondary);
+      background: #ffffff;
+      padding: 6px 9px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-submit {
+      width: 100%;
+      height: 44px;
+      border-radius: var(--radius-md);
+      font-weight: 700;
+      font-size: 14px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .btn-submit:active {
+      transform: scale(0.99);
+    }
+
+    .btn-submit.green {
+      background: var(--primary);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    }
+
+    .btn-submit.green:hover { background: var(--primary-hover); }
+
+    .btn-submit.amber {
+      background: #d97706;
+      box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);
+    }
+
+    .btn-submit.amber:hover { background: #b45309; }
+
+    /* ==========================================================================
+       NATIVE SVG CONSUMPTION CHART
+       ========================================================================== */
+    .chart-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .title-bar {
+      width: 4px;
+      height: 18px;
+      border-radius: 99px;
+      background: var(--text-main);
+    }
+
+    .section-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .legend-pills {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .chart-box {
+      width: 100%;
+      min-height: 230px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chart-empty {
+      text-align: center;
+      padding: 24px;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    /* ==========================================================================
+       HISTORY TABLE & BADGES
+       ========================================================================== */
+    .history-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .history-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-pills {
+      display: flex;
+      background: #f1f5f9;
+      padding: 3px;
+      border-radius: var(--radius-md);
+      gap: 2px;
+    }
+
+    .filter-btn {
+      padding: 5px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .filter-btn.active {
+      background: #ffffff;
+      color: var(--text-main);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .count-pill {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 5px 11px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: var(--text-secondary);
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th {
+      background: var(--bg-subtle);
+      padding: 12px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 13px 16px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 13px;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    tr:hover td {
+      background: #f8fafc;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .badge-gasolina { background: #fef3c7; color: #92400e; }
+    .badge-etanol { background: #d1fae5; color: #065f46; }
+    .badge-diesel { background: #e2e8f0; color: #1e293b; }
+    .badge-gnv { background: #e0f2fe; color: #075985; }
+    .badge-maint { background: #ffedd5; color: #9a3412; }
+
+    .kml-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .kml-exact {
+      background: var(--primary-soft);
+      color: var(--primary-text);
+      border: 1px solid #a7f3d0;
+    }
+
+    .kml-cycle {
+      background: var(--blue-soft);
+      color: var(--blue-text);
+      border: 1px solid #bfdbfe;
+    }
+
+    .kml-est {
+      background: var(--amber-soft);
+      color: var(--amber-text);
+      border: 1px solid #fde68a;
+    }
+
+    .kml-pending {
+      background: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #e2e8f0;
+    }
+
+    .sub-detail {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .btn-del {
+      padding: 6px;
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+
+    .btn-del:hover {
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .empty-state {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    /* ==========================================================================
+       MODALS & TOASTS
+       ========================================================================== */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(3px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .modal-card {
+      background: #ffffff;
+      border-radius: var(--radius-lg);
+      max-width: 640px;
+      width: 100%;
+      padding: 22px;
+      box-shadow: var(--shadow-lg);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-card.sm {
+      max-width: 440px;
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 16px;
+    }
+
+    .garage-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    @media (min-width: 560px) {
+      .garage-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .veh-item {
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .veh-item.active {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .veh-item-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .fab-mobile {
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      z-index: 35;
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    @media (min-width: 960px) {
+      .fab-mobile { display: none; }
+    }
+
+    .toast-wrap {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 80;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+      max-width: 92vw;
+    }
+
+    .toast {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 11px 16px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: var(--shadow-lg);
+      border-left: 4px solid var(--primary);
+      animation: fadeUp 0.25s ease;
+    }
+
+    .toast.warn { border-left-color: var(--amber); }
+    .toast.err { border-left-color: var(--danger); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================================================
+       CABEÇALHO PRINCIPAL & GARAGEM
+       ======================================================================== -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="22" x2="15" y2="22"></line>
+            <line x1="4" y1="9" x2="14" y2="9"></line>
+            <path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"></path>
+            <path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"></path>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">
+            AutoTrack
+            <span class="offline-pill" id="offline-status-badge">
+              <span class="offline-dot"></span>
+              <span id="offline-status-text">Offline Pronto</span>
+            </span>
+          </div>
+          <div class="brand-sub">Combustível, Parciais & Manutenção</div>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <div class="vehicle-selector-wrap">
+          <span id="header-veh-icon"></span>
+          <select id="header-vehicle-select" class="vehicle-select" aria-label="Selecionar Veículo" onchange="onVehicleSelectChange(this.value)"></select>
+        </div>
+
+        <button type="button" class="btn-header btn-emerald" onclick="openGarageModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>Veículos</span>
+        </button>
+
+        <button type="button" class="btn-header btn-slate" onclick="exportCSV()" title="Exportar Planilha CSV">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span>CSV</span>
+        </button>
+
+        <button type="button" class="btn-header btn-slate" onclick="openDataModal()" title="Gerenciar Backup">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       CONTEÚDO PRINCIPAL
+       ======================================================================== -->
+  <main class="container">
+
+    <!-- Banner do Veículo Ativo -->
+    <section class="vehicle-banner">
+      <div class="banner-left">
+        <div class="banner-avatar" id="banner-avatar"></div>
+        <div>
+          <div class="banner-title-row">
+            <h1 class="banner-name" id="banner-name">Carregando...</h1>
+            <span class="plate-badge" id="banner-plate">---</span>
+            <span class="cat-badge" id="banner-cat">Carro</span>
+          </div>
+          <div class="banner-meta" id="banner-meta">---</div>
+        </div>
+      </div>
+      <button type="button" class="btn-outline-sm" onclick="openGarageModal()">Trocar / Editar Garagem</button>
+    </section>
+
+    <!-- Cards de Indicadores (KPIs) -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">Média Geral</span>
+          <span class="kpi-icon green">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpi-avg-kml">--</span>
+          <span class="kpi-unit">KM/L</span>
+        </div>
+        <div class="kpi-sub" id="kpi-last-kml">Último: -- km/l</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">Custo / KM</span>
+          <span class="kpi-icon amber">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>
+          </span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-unit muted">R$</span>
+          <span class="kpi-value" id="kpi-cost-km">--</span>
+        </div>
+        <div class="kpi-sub" id="kpi-cost-sub">Média por km rodado</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">Total Gasto</span>
+          <span class="kpi-icon blue">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          </span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-unit muted">R$</span>
+          <span class="kpi-value" id="kpi-total-spent">0,00</span>
+        </div>
+        <div class="kpi-sub" id="kpi-spent-breakdown">Comb: R$ 0 | Manut: R$ 0</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label" id="kpi-odo-label">Odômetro</span>
+          <span class="kpi-icon slate">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 14l4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>
+          </span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpi-odometer">0</span>
+          <span class="kpi-unit muted" id="kpi-odo-unit">KM</span>
+        </div>
+        <div class="kpi-sub" id="kpi-driven-km">Monitorado: 0 km</div>
+      </div>
+    </section>
+
+    <!-- Formulário de Registro + Gráfico SVG Nativo -->
+    <section class="workspace-grid">
+      
+      <!-- Card Formulário -->
+      <div class="card" id="form-card">
+        <div class="segmented-tabs">
+          <button type="button" class="seg-tab active" id="tab-fuel" onclick="switchFormTab('fuel')">
+            <span class="dot green"></span> Abastecimento
+          </button>
+          <button type="button" class="seg-tab" id="tab-maint" onclick="switchFormTab('maint')">
+            <span class="dot amber"></span> Manutenção
+          </button>
+        </div>
+
+        <!-- FORMULÁRIO DE ABASTECIMENTO -->
+        <form id="fuel-form" class="form-stack">
+          <div>
+            <label class="field-label" for="fuel-veh-select">Veículo</label>
+            <select id="fuel-veh-select" class="field-input bold" onchange="updateFormTankInfo()"></select>
+          </div>
+
+          <div class="form-row-2">
+            <div>
+              <label class="field-label" for="fuel-date">Data</label>
+              <input type="date" id="fuel-date" class="field-input" required />
+            </div>
+            <div>
+              <label class="field-label" for="fuel-type">Combustível</label>
+              <select id="fuel-type" class="field-input">
+                <option value="Gasolina">Gasolina</option>
+                <option value="Etanol">Etanol</option>
+                <option value="Diesel">Diesel</option>
+                <option value="GNV">GNV (m³)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div>
+              <label class="field-label" for="fuel-odo">Odômetro Atual (KM)</label>
+              <input type="number" id="fuel-odo" class="field-input bold" step="1" placeholder="Ex: 29540" required />
+            </div>
+            <div>
+              <label class="field-label" for="fuel-liters">Litros / m³</label>
+              <input type="number" id="fuel-liters" class="field-input bold" step="0.01" min="0.1" placeholder="Ex: 35.50" required />
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div>
+              <label class="field-label" for="fuel-price">Preço / Litro (R$)</label>
+              <input type="number" id="fuel-price" class="field-input" step="0.001" min="0.01" placeholder="Ex: 5.89" required />
+            </div>
+            <div>
+              <label class="field-label" for="fuel-total">Valor Total (R$)</label>
+              <input type="number" id="fuel-total" class="field-input emerald" step="0.01" min="0.1" placeholder="Ex: 209.10" required />
+            </div>
+          </div>
+
+          <!-- Toggle Inteligente: Tanque Cheio vs Parcial -->
+          <div class="toggle-box">
+            <div class="toggle-header">
+              <div class="toggle-info">
+                <span class="toggle-title">Completou o tanque?</span>
+                <span class="toggle-desc" id="toggle-desc-text">Ativado: fecha o ciclo e calcula a média exata (KM/L).</span>
+              </div>
+              <label class="switch" aria-label="Completou o tanque">
+                <input type="checkbox" id="fuel-full" checked onchange="onFullTankToggle()" />
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- Painel exibido quando é abastecimento PARCIAL -->
+            <div id="partial-gauge-panel" class="gauge-panel hidden">
+              <label class="field-label" style="margin-bottom:2px;">Nível no marcador após abastecer (opcional):</label>
+              <div class="gauge-pills" id="gauge-pills">
+                <button type="button" class="gauge-btn" data-level="0.10" onclick="selectGaugeLevel(this)">Reserva</button>
+                <button type="button" class="gauge-btn" data-level="0.25" onclick="selectGaugeLevel(this)">1/4</button>
+                <button type="button" class="gauge-btn selected" data-level="0.50" onclick="selectGaugeLevel(this)">1/2</button>
+                <button type="button" class="gauge-btn" data-level="0.75" onclick="selectGaugeLevel(this)">3/4</button>
+                <button type="button" class="gauge-btn" data-level="0.90" onclick="selectGaugeLevel(this)">Quase</button>
+              </div>
+              <div class="gauge-hint" id="partial-hint-text">
+                Os litros serão acumulados no ciclo até você completar o tanque, e também estimados pelo marcador.
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit green">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Salvar Abastecimento
+          </button>
+        </form>
+
+        <!-- FORMULÁRIO DE MANUTENÇÃO -->
+        <form id="maint-form" class="form-stack hidden">
+          <div>
+            <label class="field-label" for="maint-veh-select">Veículo</label>
+            <select id="maint-veh-select" class="field-input bold"></select>
+          </div>
+
+          <div class="form-row-2">
+            <div>
+              <label class="field-label" for="maint-date">Data</label>
+              <input type="date" id="maint-date" class="field-input" required />
+            </div>
+            <div>
+              <label class="field-label" for="maint-cat">Serviço / Item</label>
+              <select id="maint-cat" class="field-input">
+                <option value="Troca de Óleo">Troca de Óleo</option>
+                <option value="Filtros">Filtros (Ar/Comb./Óleo)</option>
+                <option value="Pneus / Alinhamento">Pneus / Alinhamento</option>
+                <option value="Revisão Geral">Revisão Geral</option>
+                <option value="Freios">Freios</option>
+                <option value="Bateria / Elétrica">Bateria / Elétrica</option>
+                <option value="Documentação / Seguro">Doc / Seguro</option>
+                <option value="Outros">Outros</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div>
+              <label class="field-label" for="maint-odo">Odômetro (KM)</label>
+              <input type="number" id="maint-odo" class="field-input bold" step="1" placeholder="Ex: 29600" required />
+            </div>
+            <div>
+              <label class="field-label" for="maint-cost">Valor Pago (R$)</label>
+              <input type="number" id="maint-cost" class="field-input bold" step="0.01" min="0" placeholder="Ex: 240.00" required />
+            </div>
+          </div>
+
+          <div>
+            <label class="field-label" for="maint-notes">Descrição / Oficina</label>
+            <input type="text" id="maint-notes" class="field-input" placeholder="Ex: Óleo 5W30 sintético + filtro" required />
+          </div>
+
+          <button type="submit" class="btn-submit amber">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Salvar Manutenção
+          </button>
+        </form>
+      </div>
+
+      <!-- Card Gráfico Nativo Offline -->
+      <div class="card">
+        <div class="chart-header">
+          <div>
+            <h2 class="section-title">
+              <span class="title-bar"></span>
+              Evolução do Consumo (KM/L)
+            </h2>
+            <p class="section-sub">Cálculo exato (tanque cheio / ciclo fechado) e estimado (parcial)</p>
+          </div>
+          <div class="legend-pills">
+            <span class="legend-item"><span class="dot green"></span> Exato / Ciclo</span>
+            <span class="legend-item"><span class="dot amber"></span> Parcial Est.</span>
+          </div>
+        </div>
+
+        <div class="chart-box" id="chart-container">
+          <div class="chart-empty">Carregando gráfico...</div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ======================================================================
+         HISTÓRICO DE ABASTECIMENTOS E MANUTENÇÕES
+         ====================================================================== -->
+    <section class="history-card">
+      <div class="history-header">
+        <div>
+          <h2 class="section-title">Histórico de Registros</h2>
+          <p class="section-sub">Todos os abastecimentos (cheios e parciais) e manutenções</p>
+        </div>
+        <div class="filter-group">
+          <div class="filter-pills">
+            <button type="button" class="filter-btn active" id="flt-all" onclick="setHistoryFilter('all')">Todos</button>
+            <button type="button" class="filter-btn" id="flt-fuel" onclick="setHistoryFilter('fuel')">Abastec.</button>
+            <button type="button" class="filter-btn" id="flt-maint" onclick="setHistoryFilter('maint')">Manut.</button>
+          </div>
+          <span class="count-pill" id="history-count">0</span>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Veículo</th>
+              <th>Tipo / Detalhe</th>
+              <th>Odômetro</th>
+              <th>Qtd / Info</th>
+              <th>Total Pago</th>
+              <th>Consumo (KM/L)</th>
+              <th style="text-align:right;">Ação</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody"></tbody>
+        </table>
+      </div>
+
+      <div id="history-empty" class="empty-state hidden">
+        <strong>Nenhum registro encontrado</strong>
+        <p style="font-size:12px; margin-top:4px;">Adicione um abastecimento ou manutenção acima para começar.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Botão Flutuante Mobile -->
+  <button type="button" class="fab-mobile" onclick="document.getElementById('form-card').scrollIntoView({behavior:'smooth'})" aria-label="Novo Registro">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+  </button>
+
+  <!-- ========================================================================
+       MODAL GARAGEM MULTI-VEÍCULOS
+       ======================================================================== -->
+  <div id="garage-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <h3 style="font-size:17px; font-weight:800;">Minha Garagem</h3>
+          <p style="font-size:12px; color:var(--text-secondary);">Gerencie seus veículos e capacidade de tanque (usada no cálculo parcial)</p>
+        </div>
+        <button type="button" onclick="closeGarageModal()" style="padding:6px; color:var(--text-secondary);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div id="garage-list" class="garage-grid"></div>
+
+      <form id="vehicle-form" class="form-stack" style="border-top:1px solid var(--border-color); padding-top:16px;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <h4 id="veh-form-title" style="font-size:14px; font-weight:700;">Cadastrar Novo Veículo</h4>
+          <button type="button" id="btn-cancel-edit" class="hidden" onclick="resetVehicleForm()" style="font-size:12px; text-decoration:underline; color:var(--text-secondary);">Cancelar edição</button>
+        </div>
+
+        <input type="hidden" id="veh-edit-id" />
+
+        <div class="form-row-2">
+          <div>
+            <label class="field-label" for="veh-name">Apelido / Modelo *</label>
+            <input type="text" id="veh-name" class="field-input bold" placeholder="Ex: Onix Plus 1.0 Turbo" required />
+          </div>
+          <div>
+            <label class="field-label" for="veh-brand">Marca / Ano *</label>
+            <input type="text" id="veh-brand" class="field-input" placeholder="Ex: Chevrolet • 2024" required />
+          </div>
+        </div>
+
+        <div class="form-row-3">
+          <div>
+            <label class="field-label" for="veh-cat">Categoria *</label>
+            <select id="veh-cat" class="field-input">
+              <option value="Carro">Carro</option>
+              <option value="Moto">Moto</option>
+              <option value="SUV/Caminhonete">SUV/Caminhonete</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="veh-tank">Tanque (Litros) *</label>
+            <input type="number" id="veh-tank" class="field-input bold" step="1" min="1" placeholder="Ex: 44" required />
+          </div>
+          <div>
+            <label class="field-label" for="veh-plate">Placa (Opcional)</label>
+            <input type="text" id="veh-plate" class="field-input" maxlength="8" placeholder="ABC-1D23" style="text-transform:uppercase;" />
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit green" id="veh-submit-btn">Salvar Veículo na Garagem</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL BACKUP & DADOS OFFLINE
+       ======================================================================== -->
+  <div id="data-modal" class="modal-backdrop hidden">
+    <div class="modal-card sm">
+      <div class="modal-head">
+        <h3 style="font-size:17px; font-weight:800;">Dados & Backup Offline</h3>
+        <button type="button" onclick="closeDataModal()" style="padding:6px; color:var(--text-secondary);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <p style="font-size:12px; color:var(--text-secondary); margin-bottom:16px;">
+        Todos os dados ficam gravados na memória interna deste aparelho. Exporte regularmente em CSV ou JSON para manter uma cópia de segurança.
+      </p>
+      <div class="form-stack">
+        <button type="button" class="btn-submit green" onclick="exportCSV(); closeDataModal();">Exportar Planilha (CSV)</button>
+        <button type="button" class="btn-outline-sm" style="height:40px;" onclick="loadDemoData(); closeDataModal();">Restaurar Dados de Demonstração</button>
+        <button type="button" class="btn-outline-sm" style="height:40px; color:var(--danger); border-color:#fecaca;" onclick="clearRecordsOnly(); closeDataModal();">Limpar Histórico (Manter Veículos)</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-wrap"></div>
+
+  <!-- ========================================================================
+       MOTOR JAVASCRIPT COMPLETO + SERVICE WORKER OFFLINE
+       ======================================================================== -->
+  <script>
+    /* 1. REGISTRO DO SERVICE WORKER PARA FUNCIONAMENTO 100% OFFLINE */
+    (function registerOfflineWorker() {
+      if ('serviceWorker' in navigator) {
+        const swCode = `
+          const CACHE_NAME = 'autotrack-offline-v3';
+          self.addEventListener('install', (event) => {
+            self.skipWaiting();
+            event.waitUntil(
+              caches.open(CACHE_NAME).then((cache) => cache.addAll(['./', location.href]).catch(() => {}))
+            );
+          });
+          self.addEventListener('activate', (event) => {
+            event.waitUntil(self.clients.claim());
+          });
+          self.addEventListener('fetch', (event) => {
+            if (event.request.method !== 'GET') return;
+            event.respondWith(
+              caches.match(event.request).then((cached) => {
+                const networkFetch = fetch(event.request).then((response) => {
+                  if (response && response.status === 200) {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                  }
+                  return response;
+                }).catch(() => cached);
+                return cached || networkFetch;
+              })
+            );
+          });
+        `;
+        try {
+          const blob = new Blob([swCode], { type: 'application/javascript' });
+          const swUrl = URL.createObjectURL(blob);
+          navigator.serviceWorker.register(swUrl).catch(() => {});
+        } catch (e) {}
+      }
+
+      const updateOnlineBadge = () => {
+        const txt = document.getElementById('offline-status-text');
+        if (txt) txt.textContent = navigator.onLine ? 'Offline Pronto' : 'Modo Offline';
+      };
+      window.addEventListener('online', updateOnlineBadge);
+      window.addEventListener('offline', updateOnlineBadge);
+      updateOnlineBadge();
+    })();
+
+    /* 2. ESTADO E ARMAZENAMENTO LOCAL */
+    const STORAGE_KEYS = {
+      VEHICLES: 'autotrack_v3_vehicles',
+      FUEL: 'autotrack_v3_fuel',
+      MAINT: 'autotrack_v3_maint',
+      SELECTED: 'autotrack_v3_selected'
+    };
+
+    let vehicles = [];
+    let fuelRecords = [];
+    let maintRecords = [];
+    let selectedVehicleId = 'veh-hb20';
+    let historyFilter = 'all';
+    let selectedGaugeLevel = 0.50;
+
+    function relDate(days) {
+      const d = new Date();
+      d.setDate(d.getDate() + days);
+      return d.toISOString().split('T')[0];
+    }
+
+    const DEMO_VEHICLES = [
+      { id: 'veh-hb20', name: 'HB20 1.0 Sense', brand: 'Hyundai • 2023', category: 'Carro', tank: 50, plate: 'RJA-4B21' },
+      { id: 'veh-cg160', name: 'Honda CG 160 Titan', brand: 'Honda • 2024', category: 'Moto', tank: 16, plate: 'KLM-9E88' }
+    ];
+
+    /* Demonstração inclui: Tanque Cheio -> Parcial -> Tanque Cheio (Ciclo) + Parcial Estimado */
+    const DEMO_FUEL = [
+      { id: 'f-1', vehicleId: 'veh-hb20', date: relDate(-28), fuel: 'Gasolina', odometer: 28000, liters: 42.00, price: 5.89, total: 247.38, fullTank: true, gaugeAfter: 1.0 },
+      { id: 'f-2', vehicleId: 'veh-hb20', date: relDate(-19), fuel: 'Gasolina', odometer: 28260, liters: 18.00, price: 5.95, total: 107.10, fullTank: false, gaugeAfter: 0.50 },
+      { id: 'f-3', vehicleId: 'veh-hb20', date: relDate(-10), fuel: 'Gasolina', odometer: 28650, liters: 32.00, price: 5.92, total: 189.44, fullTank: true, gaugeAfter: 1.0 },
+      { id: 'f-4', vehicleId: 'veh-hb20', date: relDate(-2), fuel: 'Etanol', odometer: 28910, liters: 20.00, price: 3.99, total: 79.80, fullTank: false, gaugeAfter: 0.50 },
+      { id: 'f-5', vehicleId: 'veh-cg160', date: relDate(-14), fuel: 'Gasolina', odometer: 8400, liters: 12.50, price: 5.89, total: 73.63, fullTank: true, gaugeAfter: 1.0 },
+      { id: 'f-6', vehicleId: 'veh-cg160', date: relDate(-3), fuel: 'Gasolina', odometer: 8880, liters: 12.30, price: 5.95, total: 73.19, fullTank: true, gaugeAfter: 1.0 }
+    ];
+
+    const DEMO_MAINT = [
+      { id: 'm-1', vehicleId: 'veh-hb20', date: relDate(-12), category: 'Troca de Óleo', odometer: 28500, cost: 285.00, notes: 'Óleo 5W30 Sintético + Filtro' },
+      { id: 'm-2', vehicleId: 'veh-cg160', date: relDate(-7), category: 'Revisão Geral', odometer: 8650, cost: 110.00, notes: 'Óleo Mobil + lubrificação relação' }
+    ];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('fuel-date').value = today;
+      document.getElementById('maint-date').value = today;
+
+      loadStorage();
+      bindAutoMath();
+      renderAll();
+    });
+
+    function loadStorage() {
+      try {
+        const rawV = localStorage.getItem(STORAGE_KEYS.VEHICLES);
+        const rawF = localStorage.getItem(STORAGE_KEYS.FUEL);
+        const rawM = localStorage.getItem(STORAGE_KEYS.MAINT);
+        const rawS = localStorage.getItem(STORAGE_KEYS.SELECTED);
+
+        if (rawV) {
+          vehicles = JSON.parse(rawV);
+          fuelRecords = rawF ? JSON.parse(rawF) : [];
+          maintRecords = rawM ? JSON.parse(rawM) : [];
+        } else {
+          vehicles = [...DEMO_VEHICLES];
+          fuelRecords = [...DEMO_FUEL];
+          maintRecords = [...DEMO_MAINT];
+          saveStorage();
+        }
+
+        if (!vehicles.length) {
+          vehicles = [...DEMO_VEHICLES];
+          saveStorage();
+        }
+
+        if (rawS && (rawS === 'ALL' || vehicles.some(v => v.id === rawS))) {
+          selectedVehicleId = rawS;
+        } else {
+          selectedVehicleId = vehicles[0].id;
+        }
+      } catch (e) {
+        vehicles = [...DEMO_VEHICLES];
+        fuelRecords = [...DEMO_FUEL];
+        maintRecords = [...DEMO_MAINT];
+        selectedVehicleId = vehicles[0].id;
+      }
+    }
+
+    function saveStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(vehicles));
+        localStorage.setItem(STORAGE_KEYS.FUEL, JSON.stringify(fuelRecords));
+        localStorage.setItem(STORAGE_KEYS.MAINT, JSON.stringify(maintRecords));
+        localStorage.setItem(STORAGE_KEYS.SELECTED, selectedVehicleId);
+      } catch (e) {
+        showToast('Erro ao gravar dados no dispositivo.', 'err');
+      }
+    }
+
+    /* 3. SINCRONIZAÇÃO LITROS x PREÇO x VALOR TOTAL */
+    function bindAutoMath() {
+      const lEl = document.getElementById('fuel-liters');
+      const pEl = document.getElementById('fuel-price');
+      const tEl = document.getElementById('fuel-total');
+
+      const calcTotal = () => {
+        const l = parseFloat(lEl.value);
+        const p = parseFloat(pEl.value);
+        if (l > 0 && p > 0) tEl.value = (l * p).toFixed(2);
+      };
+
+      const calcPrice = () => {
+        const l = parseFloat(lEl.value);
+        const t = parseFloat(tEl.value);
+        if (l > 0 && t > 0) pEl.value = (t / l).toFixed(3);
+      };
+
+      lEl.addEventListener('input', calcTotal);
+      pEl.addEventListener('input', calcTotal);
+      tEl.addEventListener('input', calcPrice);
+    }
+
+    /* 4. MOTOR DE CÁLCULO PARA TODAS AS SITUAÇÕES (TANQUE CHEIO, CICLO ACUMULADO E PARCIAL ESTIMADO) */
+    function computeVehicleFuelAnalysis(vehicleId) {
+      const veh = vehicles.find(v => v.id === vehicleId);
+      const tankCapacity = veh && veh.tank > 0 ? veh.tank : 50;
+
+      const sorted = fuelRecords
+        .filter(r => r.vehicleId === vehicleId)
+        .sort((a, b) => (a.odometer !== b.odometer ? a.odometer - b.odometer : new Date(a.date) - new Date(b.date)));
+
+      let exactKm = 0;
+      let exactLiters = 0;
+      let exactCost = 0;
+
+      let estKm = 0;
+      let estLiters = 0;
+      let estCost = 0;
+
+      // Controle de ciclo entre tanques cheios
+      let lastFullIdx = -1;
+      let cycleLiters = 0;
+      let cycleCost = 0;
+
+      const results = sorted.map((rec, idx) => {
+        const item = {
+          ...rec,
+          kml: null,
+          costPerKm: null,
+          distance: null,
+          calcMode: 'pending', // 'exact', 'cycle', 'estimated', 'pending'
+          calcLabel: ''
+        };
+
+        if (idx === 0) {
+          if (rec.fullTank) {
+            lastFullIdx = idx;
+            item.calcLabel = 'Base (Tanque Cheio)';
+          } else {
+            item.calcLabel = 'Base Inicial (Parcial)';
+          }
+          return item;
+        }
+
+        const prev = sorted[idx - 1];
+        const stepDist = rec.odometer - prev.odometer;
+
+        if (rec.fullTank) {
+          if (lastFullIdx !== -1) {
+            // Situação A (Tanque Cheio -> Tanque Cheio) ou Situação B (Parciais + Tanque Cheio)
+            const fullCycleDist = rec.odometer - sorted[lastFullIdx].odometer;
+            const totalCycleLiters = cycleLiters + rec.liters;
+            const totalCycleCost = cycleCost + rec.total;
+
+            if (fullCycleDist > 0 && totalCycleLiters > 0) {
+              const kml = fullCycleDist / totalCycleLiters;
+              const cpk = totalCycleCost / fullCycleDist;
+              const hasPartialsInCycle = (idx - lastFullIdx) > 1;
+
+              item.kml = kml;
+              item.costPerKm = cpk;
+              item.distance = fullCycleDist;
+              item.calcMode = hasPartialsInCycle ? 'cycle' : 'exact';
+              item.calcLabel = hasPartialsInCycle ? `Ciclo (${totalCycleLiters.toFixed(1)}L)` : 'Exato (Cheio)';
+
+              // Atualiza os registros parciais intermediários desse ciclo com a média real fechada
+              if (hasPartialsInCycle) {
+                for (let k = lastFullIdx + 1; k < idx; k++) {
+                  results[k].kml = kml;
+                  results[k].costPerKm = cpk;
+                  results[k].calcMode = 'cycle';
+                  results[k].calcLabel = 'Ciclo Fechado';
+                }
+              }
+
+              exactKm += fullCycleDist;
+              exactLiters += totalCycleLiters;
+              exactCost += totalCycleCost;
+            }
+          } else {
+            // Primeiro tanque cheio após registros parciais sem base cheia anterior:
+            // Estima usando o nível do marcador anterior (se disponível) ou delta direto
+            if (stepDist > 0 && prev.gaugeAfter) {
+              const prevFuelInTank = tankCapacity * prev.gaugeAfter;
+              const consumed = prevFuelInTank + rec.liters - tankCapacity;
+              if (consumed > 1) {
+                item.kml = stepDist / consumed;
+                item.costPerKm = rec.total / stepDist;
+                item.distance = stepDist;
+                item.calcMode = 'estimated';
+                item.calcLabel = 'Estimado (Marcador)';
+                estKm += stepDist;
+                estLiters += consumed;
+                estCost += rec.total;
+              }
+            }
+          }
+
+          lastFullIdx = idx;
+          cycleLiters = 0;
+          cycleCost = 0;
+        } else {
+          // Abastecimento PARCIAL
+          cycleLiters += rec.liters;
+          cycleCost += rec.total;
+
+          // Situação C: Estimativa imediata pelo marcador do tanque (caso o usuário nunca encha o tanque)
+          const prevLevel = prev.fullTank ? 1.0 : (prev.gaugeAfter || null);
+          const currLevel = rec.gaugeAfter || null;
+
+          if (stepDist > 0 && prevLevel !== null && currLevel !== null) {
+            const litersBefore = tankCapacity * prevLevel;
+            const litersAfter = tankCapacity * currLevel;
+            const estimatedConsumed = (litersBefore + rec.liters) - litersAfter;
+
+            if (estimatedConsumed > 1) {
+              item.kml = stepDist / estimatedConsumed;
+              item.costPerKm = (estimatedConsumed * rec.price) / stepDist;
+              item.distance = stepDist;
+              item.calcMode = 'estimated';
+              item.calcLabel = 'Parcial (Estimado)';
+
+              estKm += stepDist;
+              estLiters += estimatedConsumed;
+              estCost += (estimatedConsumed * rec.price);
+            } else {
+              item.calcMode = 'pending';
+              item.calcLabel = 'Parcial (Em ciclo)';
+            }
+          } else {
+            item.calcMode = 'pending';
+            item.calcLabel = 'Parcial (Em ciclo)';
+          }
+        }
+
+        return item;
+      });
+
+      // Consolida média: prioriza ciclos exatos, mas incorpora estimativas parciais abertas se existirem
+      const totalKm = exactKm + estKm;
+      const totalLiters = exactLiters + estLiters;
+      const totalCost = exactCost + estCost;
+
+      const vehMaint = maintRecords.filter(m => m.vehicleId === vehicleId);
+      const fuelSpent = sorted.reduce((acc, r) => acc + r.total, 0);
+      const maintSpent = vehMaint.reduce((acc, m) => acc + m.cost, 0);
+
+      const allOdos = [...sorted.map(r => r.odometer), ...vehMaint.map(m => m.odometer)];
+      const maxOdo = allOdos.length ? Math.max(...allOdos) : 0;
+      const minOdo = allOdos.length ? Math.min(...allOdos) : 0;
+
+      return {
+        enrichedFuel: results,
+        validKm: totalKm,
+        validLiters: totalLiters,
+        validCost: totalCost,
+        avgKml: totalLiters > 0 ? totalKm / totalLiters : null,
+        avgCostKm: totalKm > 0 ? totalCost / totalKm : null,
+        fuelSpent,
+        maintSpent,
+        totalSpent: fuelSpent + maintSpent,
+        maxOdo,
+        drivenKm: Math.max(0, maxOdo - minOdo)
+      };
+    }
+
+    function computeDashboardMetrics() {
+      if (selectedVehicleId !== 'ALL') {
+        const res = computeVehicleFuelAnalysis(selectedVehicleId);
+        const withKml = res.enrichedFuel.filter(r => r.kml !== null);
+        return {
+          ...res,
+          lastRecord: withKml.length ? withKml[withKml.length - 1] : null,
+          isAll: false
+        };
+      }
+
+      let sumKm = 0, sumL = 0, sumC = 0, sumFuel = 0, sumMaint = 0, sumDriven = 0;
+      let allFuel = [];
+
+      vehicles.forEach(v => {
+        const res = computeVehicleFuelAnalysis(v.id);
+        sumKm += res.validKm;
+        sumL += res.validLiters;
+        sumC += res.validCost;
+        sumFuel += res.fuelSpent;
+        sumMaint += res.maintSpent;
+        sumDriven += res.drivenKm;
+        allFuel = allFuel.concat(res.enrichedFuel);
+      });
+
+      allFuel.sort((a, b) => new Date(a.date) - new Date(b.date));
+      const withKml = allFuel.filter(r => r.kml !== null);
+
+      return {
+        enrichedFuel: allFuel,
+        avgKml: sumL > 0 ? sumKm / sumL : null,
+        lastRecord: withKml.length ? withKml[withKml.length - 1] : null,
+        avgCostKm: sumKm > 0 ? sumC / sumKm : null,
+        fuelSpent: sumFuel,
+        maintSpent: sumMaint,
+        totalSpent: sumFuel + sumMaint,
+        maxOdo: vehicles.length,
+        drivenKm: sumDriven,
+        isAll: true
+      };
+    }
+
+    /* 5. INTERAÇÕES DE FORMULÁRIO */
+    function switchFormTab(tab) {
+      const fForm = document.getElementById('fuel-form');
+      const mForm = document.getElementById('maint-form');
+      const tFuel = document.getElementById('tab-fuel');
+      const tMaint = document.getElementById('tab-maint');
+
+      if (tab === 'fuel') {
+        fForm.classList.remove('hidden');
+        mForm.classList.add('hidden');
+        tFuel.classList.add('active');
+        tMaint.classList.remove('active');
+      } else {
+        fForm.classList.add('hidden');
+        mForm.classList.remove('hidden');
+        tMaint.classList.add('active');
+        tFuel.classList.remove('active');
+      }
+    }
+
+    function onFullTankToggle() {
+      const isFull = document.getElementById('fuel-full').checked;
+      const panel = document.getElementById('partial-gauge-panel');
+      const desc = document.getElementById('toggle-desc-text');
+
+      if (isFull) {
+        panel.classList.add('hidden');
+        desc.textContent = 'Ativado: fecha o ciclo e calcula a média exata (KM/L).';
+      } else {
+        panel.classList.remove('hidden');
+        desc.textContent = 'Parcial: acumula no ciclo e estima pelo nível do marcador.';
+        updateFormTankInfo();
+      }
+    }
+
+    function selectGaugeLevel(btn) {
+      document.querySelectorAll('.gauge-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedGaugeLevel = parseFloat(btn.dataset.level);
+      updateFormTankInfo();
+    }
+
+    function updateFormTankInfo() {
+      const vehId = document.getElementById('fuel-veh-select').value;
+      const veh = vehicles.find(v => v.id === vehId);
+      const tank = veh && veh.tank ? veh.tank : 50;
+      const estLit = (tank * selectedGaugeLevel).toFixed(1);
+      document.getElementById('partial-hint-text').textContent =
+        `Tanque de ${tank}L (${Math.round(selectedGaugeLevel * 100)}% ≈ ${estLit}L). Acumula até completar ou estima pelo marcador.`;
+    }
+
+    document.getElementById('fuel-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const vehicleId = document.getElementById('fuel-veh-select').value;
+      const date = document.getElementById('fuel-date').value;
+      const fuel = document.getElementById('fuel-type').value;
+      const odometer = parseFloat(document.getElementById('fuel-odo').value);
+      const liters = parseFloat(document.getElementById('fuel-liters').value);
+      const price = parseFloat(document.getElementById('fuel-price').value);
+      const total = parseFloat(document.getElementById('fuel-total').value);
+      const fullTank = document.getElementById('fuel-full').checked;
+
+      if (!vehicleId || isNaN(odometer) || isNaN(liters) || liters <= 0) {
+        showToast('Preencha os campos obrigatórios corretamente.', 'err');
+        return;
+      }
+
+      const prevRecords = fuelRecords.filter(r => r.vehicleId === vehicleId);
+      if (prevRecords.length > 0) {
+        const maxOdo = Math.max(...prevRecords.map(r => r.odometer));
+        if (odometer <= maxOdo) {
+          showToast(`Atenção: Odômetro menor ou igual ao anterior (${maxOdo} km).`, 'warn');
+        }
+      }
+
+      fuelRecords.push({
+        id: 'f-' + Date.now(),
+        vehicleId,
+        date,
+        fuel,
+        odometer,
+        liters,
+        price,
+        total,
+        fullTank,
+        gaugeAfter: fullTank ? 1.0 : selectedGaugeLevel
+      });
+
+      if (selectedVehicleId !== 'ALL' && selectedVehicleId !== vehicleId) {
+        selectedVehicleId = vehicleId;
+      }
+
+      saveStorage();
+      renderAll();
+
+      document.getElementById('fuel-odo').value = '';
+      document.getElementById('fuel-liters').value = '';
+      document.getElementById('fuel-price').value = '';
+      document.getElementById('fuel-total').value = '';
+
+      showToast(fullTank ? 'Abastecimento completo salvo!' : 'Abastecimento parcial registrado!');
+    });
+
+    document.getElementById('maint-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const vehicleId = document.getElementById('maint-veh-select').value;
+      const date = document.getElementById('maint-date').value;
+      const category = document.getElementById('maint-cat').value;
+      const odometer = parseFloat(document.getElementById('maint-odo').value);
+      const cost = parseFloat(document.getElementById('maint-cost').value);
+      const notes = document.getElementById('maint-notes').value.trim();
+
+      if (!vehicleId || isNaN(odometer) || isNaN(cost)) {
+        showToast('Preencha os dados da manutenção.', 'err');
+        return;
+      }
+
+      maintRecords.push({
+        id: 'm-' + Date.now(),
+        vehicleId,
+        date,
+        category,
+        odometer,
+        cost,
+        notes
+      });
+
+      if (selectedVehicleId !== 'ALL' && selectedVehicleId !== vehicleId) {
+        selectedVehicleId = vehicleId;
+      }
+
+      saveStorage();
+      renderAll();
+
+      document.getElementById('maint-odo').value = '';
+      document.getElementById('maint-cost').value = '';
+      document.getElementById('maint-notes').value = '';
+
+      showToast('Manutenção salva com sucesso!');
+    });
+
+    function deleteRecord(type, id) {
+      if (type === 'fuel') fuelRecords = fuelRecords.filter(r => r.id !== id);
+      else maintRecords = maintRecords.filter(r => r.id !== id);
+      saveStorage();
+      renderAll();
+      showToast('Registro excluído.', 'warn');
+    }
+
+    /* 6. GARAGEM MULTI-VEÍCULOS (CRUD) */
+    function onVehicleSelectChange(val) {
+      selectedVehicleId = val;
+      saveStorage();
+      renderAll();
+    }
+
+    document.getElementById('vehicle-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const editId = document.getElementById('veh-edit-id').value;
+      const name = document.getElementById('veh-name').value.trim();
+      const brand = document.getElementById('veh-brand').value.trim();
+      const category = document.getElementById('veh-cat').value;
+      const tank = parseFloat(document.getElementById('veh-tank').value) || 50;
+      const plate = document.getElementById('veh-plate').value.trim().toUpperCase();
+
+      if (!name || !brand) return;
+
+      if (editId) {
+        const idx = vehicles.findIndex(v => v.id === editId);
+        if (idx !== -1) vehicles[idx] = { ...vehicles[idx], name, brand, category, tank, plate };
+        showToast(`Veículo "${name}" atualizado!`);
+      } else {
+        const newId = 'veh-' + Date.now();
+        vehicles.push({ id: newId, name, brand, category, tank, plate });
+        selectedVehicleId = newId;
+        showToast(`Veículo "${name}" adicionado à garagem!`);
+      }
+
+      resetVehicleForm();
+      saveStorage();
+      renderAll();
+      renderGarageList();
+    });
+
+    function editVehicle(id) {
+      const v = vehicles.find(x => x.id === id);
+      if (!v) return;
+      document.getElementById('veh-edit-id').value = v.id;
+      document.getElementById('veh-name').value = v.name;
+      document.getElementById('veh-brand').value = v.brand;
+      document.getElementById('veh-cat').value = v.category;
+      document.getElementById('veh-tank').value = v.tank;
+      document.getElementById('veh-plate').value = v.plate || '';
+      document.getElementById('veh-form-title').textContent = `Editando: ${v.name}`;
+      document.getElementById('veh-submit-btn').textContent = 'Atualizar Veículo';
+      document.getElementById('btn-cancel-edit').classList.remove('hidden');
+    }
+
+    function resetVehicleForm() {
+      document.getElementById('vehicle-form').reset();
+      document.getElementById('veh-edit-id').value = '';
+      document.getElementById('veh-form-title').textContent = 'Cadastrar Novo Veículo';
+      document.getElementById('veh-submit-btn').textContent = 'Salvar Veículo na Garagem';
+      document.getElementById('btn-cancel-edit').classList.add('hidden');
+    }
+
+    function deleteVehicle(id) {
+      if (vehicles.length <= 1) {
+        showToast('Mantenha pelo menos 1 veículo cadastrado.', 'warn');
+        return;
+      }
+      vehicles = vehicles.filter(v => v.id !== id);
+      fuelRecords = fuelRecords.filter(r => r.vehicleId !== id);
+      maintRecords = maintRecords.filter(r => r.vehicleId !== id);
+      if (selectedVehicleId === id) selectedVehicleId = vehicles[0].id;
+      saveStorage();
+      renderAll();
+      renderGarageList();
+      showToast('Veículo removido da garagem.', 'warn');
+    }
+
+    function renderGarageList() {
+      const box = document.getElementById('garage-list');
+      box.innerHTML = vehicles.map(v => {
+        const active = v.id === selectedVehicleId;
+        const fCount = fuelRecords.filter(r => r.vehicleId === v.id).length;
+        const mCount = maintRecords.filter(r => r.vehicleId === v.id).length;
+        return `
+          <div class="veh-item ${active ? 'active' : ''}">
+            <div class="veh-item-top">
+              <div style="cursor:pointer;" onclick="selectedVehicleId='${v.id}'; saveStorage(); renderAll(); closeGarageModal();">
+                <div style="font-weight:700; font-size:14px;">${v.name} ${active ? '<span class="cat-badge">Ativo</span>' : ''}</div>
+                <div style="font-size:12px; color:var(--text-secondary);">${v.brand} ${v.plate ? '• ' + v.plate : ''}</div>
+              </div>
+              <div style="display:flex; gap:4px;">
+                <button type="button" class="btn-outline-sm" style="padding:4px 8px;" onclick="editVehicle('${v.id}')">Editar</button>
+                <button type="button" class="btn-del" onclick="deleteVehicle('${v.id}')" title="Excluir">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </div>
+            </div>
+            <div style="font-size:11px; color:var(--text-secondary); border-top:1px solid var(--border-color); padding-top:6px;">
+              ${v.category} • Tanque: ${v.tank}L • ${fCount} abast. / ${mCount} manut.
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    /* 7. RENDERIZAÇÃO DA UI, GRÁFICO SVG NATIVO E TABELA */
+    function renderAll() {
+      syncSelectsAndBanner();
+      const metrics = computeDashboardMetrics();
+
+      document.getElementById('kpi-avg-kml').textContent = metrics.avgKml ? metrics.avgKml.toFixed(1).replace('.', ',') : '--';
+      document.getElementById('kpi-last-kml').textContent = metrics.lastRecord
+        ? `Último: ${metrics.lastRecord.kml.toFixed(1).replace('.', ',')} km/l (${metrics.lastRecord.calcLabel})`
+        : 'Aguardando 2º registro';
+
+      document.getElementById('kpi-cost-km').textContent = metrics.avgCostKm ? metrics.avgCostKm.toFixed(2).replace('.', ',') : '--';
+      document.getElementById('kpi-total-spent').textContent = fmtBRL(metrics.totalSpent);
+      document.getElementById('kpi-spent-breakdown').textContent = `Comb: R$ ${fmtBRL(metrics.fuelSpent)} | Manut: R$ ${fmtBRL(metrics.maintSpent)}`;
+
+      if (metrics.isAll) {
+        document.getElementById('kpi-odo-label').textContent = 'Garagem';
+        document.getElementById('kpi-odometer').textContent = vehicles.length;
+        document.getElementById('kpi-odo-unit').textContent = vehicles.length === 1 ? 'VEÍCULO' : 'VEÍCULOS';
+        document.getElementById('kpi-driven-km').textContent = `Monitorado: ${metrics.drivenKm.toLocaleString('pt-BR')} km`;
+      } else {
+        document.getElementById('kpi-odo-label').textContent = 'Odômetro';
+        document.getElementById('kpi-odometer').textContent = metrics.maxOdo.toLocaleString('pt-BR');
+        document.getElementById('kpi-odo-unit').textContent = 'KM';
+        document.getElementById('kpi-driven-km').textContent = `Período: +${metrics.drivenKm.toLocaleString('pt-BR')} km`;
+        if (metrics.maxOdo > 0) {
+          document.getElementById('fuel-odo').placeholder = `> ${metrics.maxOdo}`;
+          document.getElementById('maint-odo').placeholder = `> ${metrics.maxOdo}`;
+        }
+      }
+
+      renderNativeSvgChart(metrics.enrichedFuel);
+      renderHistoryTable(metrics.enrichedFuel);
+    }
+
+    function syncSelectsAndBanner() {
+      const hSel = document.getElementById('header-vehicle-select');
+      const fSel = document.getElementById('fuel-veh-select');
+      const mSel = document.getElementById('maint-veh-select');
+
+      hSel.innerHTML = vehicles.map(v => `<option value="${v.id}">${v.name}</option>`).join('') +
+        `<option value="ALL">📊 Todos os Veículos (${vehicles.length})</option>`;
+      hSel.value = selectedVehicleId;
+
+      const formOpts = vehicles.map(v => `<option value="${v.id}">${v.name}${v.plate ? ' (' + v.plate + ')' : ''}</option>`).join('');
+      fSel.innerHTML = formOpts;
+      mSel.innerHTML = formOpts;
+
+      const targetVehId = selectedVehicleId === 'ALL' ? vehicles[0].id : selectedVehicleId;
+      fSel.value = targetVehId;
+      mSel.value = targetVehId;
+
+      const hIcon = document.getElementById('header-veh-icon');
+      const bAvatar = document.getElementById('banner-avatar');
+      const bName = document.getElementById('banner-name');
+      const bPlate = document.getElementById('banner-plate');
+      const bCat = document.getElementById('banner-cat');
+      const bMeta = document.getElementById('banner-meta');
+
+      if (selectedVehicleId === 'ALL') {
+        hIcon.innerHTML = getCategorySvg('ALL', 16);
+        bAvatar.innerHTML = getCategorySvg('ALL', 22);
+        bName.textContent = 'Visão Consolidada da Garagem';
+        bPlate.classList.add('hidden');
+        bCat.textContent = `${vehicles.length} veículos`;
+        bMeta.textContent = vehicles.map(v => v.name).join(' • ');
+      } else {
+        const v = vehicles.find(x => x.id === selectedVehicleId) || vehicles[0];
+        hIcon.innerHTML = getCategorySvg(v.category, 16);
+        bAvatar.innerHTML = getCategorySvg(v.category, 22);
+        bName.textContent = v.name;
+        if (v.plate) {
+          bPlate.textContent = v.plate;
+          bPlate.classList.remove('hidden');
+        } else {
+          bPlate.classList.add('hidden');
+        }
+        bCat.textContent = v.category;
+        bMeta.textContent = `${v.brand} • Tanque: ${v.tank}L`;
+      }
+      updateFormTankInfo();
+    }
+
+    /* Gráfico SVG Nativo (Funciona 100% Offline sem bibliotecas externas) */
+    function renderNativeSvgChart(enrichedFuel) {
+      const container = document.getElementById('chart-container');
+      const points = enrichedFuel.filter(r => r.kml !== null && r.kml > 0);
+
+      if (points.length === 0) {
+        container.innerHTML = `
+          <div class="chart-empty">
+            <strong>Dados insuficientes para o gráfico</strong>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+              Registre pelo menos 2 abastecimentos (tanque cheio ou parcial com nível do marcador) para visualizar a curva de consumo.
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      const recent = points.slice(-10);
+      const W = 640, H = 220;
+      const padL = 44, padR = 24, padT = 26, padB = 34;
+      const plotW = W - padL - padR;
+      const plotH = H - padT - padB;
+
+      const vals = recent.map(p => p.kml);
+      const minVal = Math.max(0, Math.floor(Math.min(...vals) - 1.5));
+      const maxVal = Math.ceil(Math.max(...vals) + 1.5);
+      const span = Math.max(1, maxVal - minVal);
+
+      const coords = recent.map((p, i) => {
+        const x = recent.length === 1 ? padL + plotW / 2 : padL + (i / (recent.length - 1)) * plotW;
+        const y = padT + plotH - ((p.kml - minVal) / span) * plotH;
+        return { x, y, data: p };
+      });
+
+      const linePath = coords.map((c, i) => `${i === 0 ? 'M' : 'L'} ${c.x.toFixed(1)} ${c.y.toFixed(1)}`).join(' ');
+      const areaPath = coords.length > 1
+        ? `${linePath} L ${coords[coords.length - 1].x.toFixed(1)} ${(padT + plotH).toFixed(1)} L ${coords[0].x.toFixed(1)} ${(padT + plotH).toFixed(1)} Z`
+        : '';
+
+      const gridLines = [0, 0.5, 1].map(ratio => {
+        const y = padT + plotH * ratio;
+        const labelVal = (maxVal - span * ratio).toFixed(1).replace('.', ',');
+        return `
+          <line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e2e8f0" stroke-dasharray="4 4" />
+          <text x="${padL - 8}" y="${y + 4}" text-anchor="end" font-size="10" fill="#64748b" font-weight="600">${labelVal}</text>
+        `;
+      }).join('');
+
+      const dotsAndLabels = coords.map(c => {
+        const isEst = c.data.calcMode === 'estimated';
+        const fill = isEst ? '#f59e0b' : '#10b981';
+        const dStr = fmtDateShort(c.data.date);
+        const kmlStr = c.data.kml.toFixed(1).replace('.', ',');
+        return `
+          <circle cx="${c.x}" cy="${c.y}" r="5.5" fill="${fill}" stroke="#0f172a" stroke-width="2" />
+          <text x="${c.x}" y="${c.y - 10}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#0f172a">${kmlStr}</text>
+          <text x="${c.x}" y="${H - 10}" text-anchor="middle" font-size="10" fill="#64748b">${dStr}</text>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <svg viewBox="0 0 ${W} ${H}" style="width:100%; height:auto; max-height:240px; display:block;" role="img" aria-label="Gráfico de Consumo KM/L">
+          <defs>
+            <linearGradient id="kmlGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#10b981" stop-opacity="0.28" />
+              <stop offset="100%" stop-color="#10b981" stop-opacity="0.0" />
+            </linearGradient>
+          </defs>
+          ${gridLines}
+          ${areaPath ? `<path d="${areaPath}" fill="url(#kmlGrad)" />` : ''}
+          ${coords.length > 1 ? `<path d="${linePath}" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />` : ''}
+          ${dotsAndLabels}
+        </svg>
+      `;
+    }
+
+    function setHistoryFilter(flt) {
+      historyFilter = flt;
+      ['all', 'fuel', 'maint'].forEach(k => {
+        document.getElementById('flt-' + k).classList.toggle('active', k === flt);
+      });
+      renderAll();
+    }
+
+    function renderHistoryTable(enrichedFuel) {
+      const tbody = document.getElementById('history-tbody');
+      const empty = document.getElementById('history-empty');
+      const count = document.getElementById('history-count');
+
+      const fList = enrichedFuel.map(r => ({ ...r, kind: 'fuel' }));
+      const mList = maintRecords
+        .filter(m => selectedVehicleId === 'ALL' || m.vehicleId === selectedVehicleId)
+        .map(m => ({ ...m, kind: 'maint' }));
+
+      let list = [];
+      if (historyFilter === 'all') list = [...fList, ...mList];
+      else if (historyFilter === 'fuel') list = fList;
+      else list = mList;
+
+      list.sort((a, b) => {
+        const d = new Date(b.date) - new Date(a.date);
+        return d !== 0 ? d : b.odometer - a.odometer;
+      });
+
+      count.textContent = `${list.length} ${list.length === 1 ? 'item' : 'itens'}`;
+
+      if (!list.length) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+
+      tbody.innerHTML = list.map(item => {
+        const v = vehicles.find(x => x.id === item.vehicleId);
+        const vName = v ? v.name : 'Veículo';
+
+        if (item.kind === 'fuel') {
+          const fuelClass = 'badge-' + item.fuel.toLowerCase();
+          const statusSub = item.fullTank
+            ? 'Tanque Cheio'
+            : `Parcial (${Math.round((item.gaugeAfter || 0.5) * 100)}% painel)`;
+
+          let kmlCell = `<span class="kml-pill kml-pending">${item.calcLabel || 'Aguardando'}</span>`;
+          if (item.kml !== null) {
+            const pillClass = item.calcMode === 'exact' ? 'kml-exact' : (item.calcMode === 'cycle' ? 'kml-cycle' : 'kml-est');
+            const cpkText = item.costPerKm ? `R$ ${item.costPerKm.toFixed(2).replace('.', ',')}/km` : '';
+            kmlCell = `
+              <span class="kml-pill ${pillClass}">${item.kml.toFixed(1).replace('.', ',')} km/l</span>
+              <span class="sub-detail">${item.calcLabel} ${cpkText ? '• ' + cpkText : ''}</span>
+            `;
+          }
+
+          return `
+            <tr>
+              <td>
+                <strong>${fmtDateBR(item.date)}</strong>
+                <span class="sub-detail">${statusSub}</span>
+              </td>
+              <td><span class="plate-badge" style="font-family:inherit;">${vName}</span></td>
+              <td><span class="badge ${fuelClass}">${item.fuel}</span></td>
+              <td><strong>${item.odometer.toLocaleString('pt-BR')}</strong> km</td>
+              <td>
+                <strong>${item.liters.toFixed(2).replace('.', ',')} L</strong>
+                <span class="sub-detail">R$ ${item.price.toFixed(2).replace('.', ',')}/L</span>
+              </td>
+              <td><strong>R$ ${fmtBRL(item.total)}</strong></td>
+              <td>${kmlCell}</td>
+              <td style="text-align:right;">
+                <button type="button" class="btn-del" onclick="deleteRecord('fuel', '${item.id}')" title="Excluir">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </td>
+            </tr>
+          `;
+        } else {
+          return `
+            <tr>
+              <td>
+                <strong>${fmtDateBR(item.date)}</strong>
+                <span class="sub-detail" style="color:#d97706;">Manutenção</span>
+              </td>
+              <td><span class="plate-badge" style="font-family:inherit;">${vName}</span></td>
+              <td><span class="badge badge-maint">${item.category}</span></td>
+              <td><strong>${item.odometer.toLocaleString('pt-BR')}</strong> km</td>
+              <td style="max-width:190px; overflow:hidden; text-overflow:ellipsis;" title="${item.notes}">${item.notes}</td>
+              <td><strong style="color:#b45309;">R$ ${fmtBRL(item.cost)}</strong></td>
+              <td><span class="kml-pill kml-pending">Serviço</span></td>
+              <td style="text-align:right;">
+                <button type="button" class="btn-del" onclick="deleteRecord('maint', '${item.id}')" title="Excluir">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </td>
+            </tr>
+          `;
+        }
+      }).join('');
+    }
+
+    /* 8. EXPORTAÇÃO CSV */
+    function exportCSV() {
+      const metrics = computeDashboardMetrics();
+      const filteredMaint = maintRecords.filter(m => selectedVehicleId === 'ALL' || m.vehicleId === selectedVehicleId);
+
+      if (!metrics.enrichedFuel.length && !filteredMaint.length) {
+        showToast('Nenhum registro para exportar.', 'warn');
+        return;
+      }
+
+      const headers = ['Data', 'Veiculo', 'Placa', 'Tipo', 'Combustivel_Servico', 'Odometro_KM', 'Litros', 'Preco_Litro', 'Valor_Total', 'Tanque_Cheio', 'Media_KML', 'Metodo_Calculo', 'Observacoes'];
+
+      const rowsFuel = metrics.enrichedFuel.map(r => {
+        const v = vehicles.find(x => x.id === r.vehicleId);
+        return [
+          r.date,
+          v ? v.name : '',
+          v ? v.plate : '',
+          'Abastecimento',
+          r.fuel,
+          r.odometer,
+          r.liters.toFixed(2).replace('.', ','),
+          r.price.toFixed(3).replace('.', ','),
+          r.total.toFixed(2).replace('.', ','),
+          r.fullTank ? 'Sim' : 'Parcial',
+          r.kml ? r.kml.toFixed(2).replace('.', ',') : '',
+          r.calcLabel,
+          ''
+        ];
+      });
+
+      const rowsMaint = filteredMaint.map(m => {
+        const v = vehicles.find(x => x.id === m.vehicleId);
+        return [
+          m.date,
+          v ? v.name : '',
+          v ? v.plate : '',
+          'Manutencao',
+          m.category,
+          m.odometer,
+          '',
+          '',
+          m.cost.toFixed(2).replace('.', ','),
+          '',
+          '',
+          '',
+          m.notes.replace(/;/g, ',')
+        ];
+      });
+
+      const all = [...rowsFuel, ...rowsMaint].sort((a, b) => new Date(a[0]) - new Date(b[0]));
+      const csv = '\uFEFF' + [headers.join(';'), ...all.map(r => r.join(';'))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `autotrack-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast('Planilha CSV baixada!');
+    }
+
+    /* 9. HELPERS & MODALS */
+    function getCategorySvg(cat, size) {
+      if (cat === 'Moto') {
+        return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>`;
+      }
+      if (cat === 'ALL') {
+        return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`;
+      }
+      return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>`;
+    }
+
+    function fmtBRL(n) {
+      return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function fmtDateBR(iso) {
+      if (!iso) return '';
+      const [y, m, d] = iso.split('-');
+      return `${d}/${m}/${y}`;
+    }
+
+    function fmtDateShort(iso) {
+      if (!iso) return '';
+      const [, m, d] = iso.split('-');
+      return `${d}/${m}`;
+    }
+
+    function openGarageModal() {
+      renderGarageList();
+      resetVehicleForm();
+      document.getElementById('garage-modal').classList.remove('hidden');
+    }
+
+    function closeGarageModal() {
+      document.getElementById('garage-modal').classList.add('hidden');
+    }
+
+    function openDataModal() {
+      document.getElementById('data-modal').classList.remove('hidden');
+    }
+
+    function closeDataModal() {
+      document.getElementById('data-modal').classList.add('hidden');
+    }
+
+    function loadDemoData() {
+      vehicles = [...DEMO_VEHICLES];
+      fuelRecords = [...DEMO_FUEL];
+      maintRecords = [...DEMO_MAINT];
+      selectedVehicleId = vehicles[0].id;
+      saveStorage();
+      renderAll();
+      showToast('Dados de demonstração restaurados!');
+    }
+
+    function clearRecordsOnly() {
+      fuelRecords = [];
+      maintRecords = [];
+      saveStorage();
+      renderAll();
+      showToast('Histórico limpo!', 'warn');
+    }
+
+    function showToast(msg, type = 'ok') {
+      const wrap = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = `toast ${type === 'warn' ? 'warn' : type === 'err' ? 'err' : ''}`;
+      el.textContent = msg;
+      wrap.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.25s';
+        setTimeout(() => el.remove(), 250);
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
